@@ -278,10 +278,7 @@ class SyncController {
         );
         return;
       }
-      //this.autoZoomWindow(windowId, canvasId, dispatch);
-      setTimeout(() => {
-        this.autoZoomWindow(windowId, canvasId, dispatch);
-      }, 250);
+      this.autoZoomWindow(windowId, canvasId, dispatch);
     });
   }
 
@@ -299,54 +296,13 @@ class SyncController {
     const containerW = container.clientWidth;
     const containerH = container.clientHeight;
 
-    /* Fit calculation
-  let containerFactor = Math.min(
-    containerW / width,
-    containerH / height
-  );
-  */
-    const relWidth = containerW / width;
-    const relHeight = containerH / height;
-    /*
-  let containerFactor = relHeight / relWidth;
-  if ( relWidth < relHeight ) {
-    containerFactor = relWidth / relHeight
-  }
-  */
-    let containerFactor = 1; //Math.min(relWidth,relHeight);
-    //bei containerFactor = 1 dann volle breite
-    if (height / width > containerH / containerW) {
-      // container ist zu flach fuer optimal darstellung
-      containerFactor = containerH / containerW / (height / width);
-    }
+    if (!containerW || !containerH) return;
 
-    let imageFactor = 0.00045;
-    if (height / width > 1.2) {
-      imageFactor = 0.00028;
-    } else if (height / width < 0.8) {
-      imageFactor = 0.00045;
-    }
+    const scale = Math.min(containerW / width, containerH / height);
 
-    const scale = imageFactor * containerFactor;
-
-    // Minimal offset for centering:
+    // Centering:
     const x = width / 2;
     const y = height / 2;
-    console.log(
-      windowId +
-        ": x: " +
-        x +
-        ", y: " +
-        y +
-        ", zoom:" +
-        scale +
-        " relHeight: " +
-        relHeight +
-        " relWidth: " +
-        relWidth +
-        " containerFactor " +
-        containerFactor
-    );
 
     dispatch({
       type: "mirador/UPDATE_VIEWPORT",

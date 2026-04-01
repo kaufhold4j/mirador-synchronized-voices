@@ -215,6 +215,20 @@ const SyncNavigationUI = ({
     });
   }, [syncController, dispatch]);
 
+  useEffect(() => {
+    if (!syncController || !isInitialized) return;
+
+    const workspace = document.querySelector(".mirador-workspace-viewport");
+    if (!workspace) return;
+
+    const observer = new ResizeObserver(() => {
+      syncController.autoZoomWindows(dispatch);
+    });
+
+    observer.observe(workspace);
+    return () => observer.disconnect();
+  }, [syncController, isInitialized, dispatch]);
+
   /**
    * Navigation Handlers
    */
