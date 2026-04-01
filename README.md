@@ -1,2 +1,3 @@
-# mirador-synchronized-voices
-mirador plugin fuer die parallele Anzeige mehrerer Stimmen eines Notenheftes
+# @mdz/mirador-synchronized-voices
+
+Plugin für die synchrone Darstellung mehrerer Stimmen eines Stimmbuchs

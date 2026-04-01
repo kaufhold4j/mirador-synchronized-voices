@@ -1,0 +1,15 @@
+apiVersion: backstage.io/v1beta1
+kind: Component
+metadata:
+  name: mirador-synchronized-voices
+  title: "Mirador-Plugin: @mdz/mirador-synchronized-voices"
+  description: "Plugin für die synchrone Darstellung mehrerer Stimmen eines Stimmbuchs"
+  tags:
+    - mirador-plugin
+
+spec:
+  type: library
+  lifecycle: experimental
+  owner: "a2mr"
+  dependsOn:
+    - component:mirador4
