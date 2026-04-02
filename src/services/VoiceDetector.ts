@@ -84,7 +84,7 @@ export const detectSynchronizedVoices = (manifest) => {
     // Endindex = Start der nächsten Stimme ODER Ende des Buches
     const endIndex =
       i + 1 < voiceRanges.length
-        ? canvasIds.indexOf(voiceRanges[i + 1].items?.[0])
+        ? canvasIds.indexOf(voiceRanges[i + 1].items?.[0]?.id)
         : canvasIds.length;
 
     const canvases = canvasIds.slice(startIndex, endIndex);

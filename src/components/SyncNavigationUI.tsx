@@ -4,18 +4,9 @@ import { Popover, List, ListItem, ListItemText } from "@mui/material";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 
 import {
-  Button,
   Box,
-  Switch,
-  FormControlLabel,
   Paper,
-  Chip,
 } from "@mui/material";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
-import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
-import FirstPageIcon from "@mui/icons-material/FirstPage";
-import LastPageIcon from "@mui/icons-material/LastPage";
-import SyncDisabledIcon from "@mui/icons-material/SyncDisabled";
 import InfoIcon from "@mui/icons-material/Info";
 
 import { useTheme } from "@mui/material/styles";
@@ -23,7 +14,6 @@ import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import Stack from "@mui/material/Stack";
 import Divider from "@mui/material/Divider";
-import SyncIcon from "@mui/icons-material/Sync";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { Typography } from "@mui/material";
@@ -59,9 +49,6 @@ const SyncNavigationUI = ({
   const [syncController, setSyncController] = useState(null);
   const [windowManager, setWindowManager] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [syncEnabled, setSyncEnabled] = useState(true);
-  const [voices, setVoices] = useState([]);
   const [works, setWorks] = useState([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [error, setError] = useState(null);
@@ -181,10 +168,7 @@ const SyncNavigationUI = ({
         // 6. State setzen
         setWindowManager(wm);
         setSyncController(sc);
-        setVoices(voiceData.voices);
-        setTotalPages(voiceData.minPages);
         setCurrentPage(1);
-        //sc.autoZoomWindows(dispatch);
         setIsInitialized(true);
 
       } catch (err) {
@@ -228,12 +212,6 @@ const SyncNavigationUI = ({
       // @ts-expect-error - _buildMosaicLayout is a private method but we need it for responsive layout
       const layout = windowManager._buildMosaicLayout(ids);
       dispatch({ type: "mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT", layout });
-
-      // 2. Adjust zoom to fit the new layout
-      // We use a small delay to ensure Redux state and DOM are in sync before measuring
-      setTimeout(() => {
-        syncController.autoZoomWindows(dispatch);
-      }, 100);
     });
 
     observer.observe(workspace);
@@ -267,17 +245,6 @@ const SyncNavigationUI = ({
     }
   }, [syncController, dispatch]);
 
-  const toggleSync = useCallback(
-    (event) => {
-      const enabled = event.target.checked;
-      setSyncEnabled(enabled);
-      if (syncController) {
-        syncController.setSyncEnabled(enabled);
-      }
-    },
-    [syncController]
-  );
-
   const handleJumpToWork = useCallback(
     (id) => {
       if (syncController) {
@@ -286,21 +253,6 @@ const SyncNavigationUI = ({
     },
     [syncController, dispatch]
   );
-
-  /**
-   * Memoized values für Performance
-   */
-  const canNavigatePrev = useMemo(() => {
-    return true;
-  }, [syncController, currentPage]);
-
-  const canNavigateNext = useMemo(() => {
-    return true;
-  }, [syncController, currentPage]);
-
-  const layoutInfo = useMemo(() => {
-    return null;
-  }, [windowManager]);
 
   const openPopover = (event) => {
     setAnchorEl(event.currentTarget);

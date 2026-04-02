@@ -1,16 +1,6 @@
 
-import { takeEvery, select } from 'redux-saga/effects';
-
-/*
-import { setCanvas as setMiradorCanvas,
-        addWindow as addMiradorWindow,
-        updateViewport as updateMiradorViewport,
-        updateWorkspaceMosaicLayout as updateMiradorWorkspaceMosaicLayout} from "mirador/dist/es/src/state/actions";
-        */
-/*import * as Mirador from 'mirador'; */
+import { delay, put, select, takeEvery } from 'redux-saga/effects';
 import Mirador from 'mirador';
-
-/* const { actions, selectors } = Mirador; */
 
 import SyncNavigationUI from './components/SyncNavigationUI';
 import WindowVoiceInfo from './components/WindowVoiceInfo';
@@ -21,16 +11,52 @@ import { setCanvasForWindow } from  './services/SyncController';
 const onCanvasChange = function* (action) {
   const controller = yield select(state => state.synchronizedVoices.controller);
 
-    if (!controller) {
-      console.warn("No SyncController found yet.");
-      return;
-    }
-    controller.setCanvasForWindow( action.canvasId, action.windowId);
+  if (!controller) {
+    console.warn("No SyncController found yet.");
+    return;
+  }
+  controller.setCanvasForWindow(action.canvasId, action.windowId);
+
+  // Reset zoom to "fit" after canvas change with a small delay
+  yield delay(100);
+  yield put(Mirador.actions.updateViewport(action.windowId, {
+    zoom: undefined,
+    x: undefined,
+    y: undefined,
+  }));
+}
+
+const onLayoutChange = function* () {
+  const windows = yield select(state => state.windows);
+  if (!windows) return;
+
+  yield delay(100);
+  for (const windowId of Object.keys(windows)) {
+    yield put(Mirador.actions.updateViewport(windowId, {
+      zoom: undefined,
+      x: undefined,
+      y: undefined,
+    }));
+  }
+}
+
+const onWindowAdd = function* (action) {
+  const windowId = action.window?.id;
+  if (!windowId) return;
+
+  yield delay(100);
+  yield put(Mirador.actions.updateViewport(windowId, {
+    zoom: undefined,
+    x: undefined,
+    y: undefined,
+  }));
 }
 
 const pluginSaga = function* () {
   /* `takeEvery` calls the associated function every time the action is dispatched */
   yield takeEvery('mirador/SET_CANVAS', onCanvasChange);
+  yield takeEvery('mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT', onLayoutChange);
+  yield takeEvery('mirador/ADD_WINDOW', onWindowAdd);
 }
 
 
