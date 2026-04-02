@@ -216,18 +216,29 @@ const SyncNavigationUI = ({
   }, [syncController, dispatch]);
 
   useEffect(() => {
-    if (!syncController || !isInitialized) return;
+    if (!syncController || !isInitialized || !windowManager) return;
 
     const workspace = document.querySelector(".mirador-workspace-viewport");
     if (!workspace) return;
 
     const observer = new ResizeObserver(() => {
-      syncController.autoZoomWindows(dispatch);
+      // 1. Recalculate Mosaic layout based on new viewport dimensions
+      const windowConfigs = windowManager.getWindowConfigs();
+      const ids = windowConfigs.map((c) => c.id);
+      // @ts-expect-error - _buildMosaicLayout is a private method but we need it for responsive layout
+      const layout = windowManager._buildMosaicLayout(ids);
+      dispatch({ type: "mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT", layout });
+
+      // 2. Adjust zoom to fit the new layout
+      // We use a small delay to ensure Redux state and DOM are in sync before measuring
+      setTimeout(() => {
+        syncController.autoZoomWindows(dispatch);
+      }, 100);
     });
 
     observer.observe(workspace);
     return () => observer.disconnect();
-  }, [syncController, isInitialized, dispatch]);
+  }, [syncController, windowManager, isInitialized, dispatch]);
 
   /**
    * Navigation Handlers

@@ -278,7 +278,10 @@ class SyncController {
         );
         return;
       }
-      this.autoZoomWindow(windowId, canvasId, dispatch);
+      //this.autoZoomWindow(windowId, canvasId, dispatch);
+      setTimeout(() => {
+        this.autoZoomWindow(windowId, canvasId, dispatch);
+      }, 250);
     });
   }
 
@@ -298,6 +301,7 @@ class SyncController {
 
     if (!containerW || !containerH) return;
 
+    // Standard "contain" fit algorithm for Mirador 4 / OpenSeadragon
     const scale = Math.min(containerW / width, containerH / height);
 
     // Centering:
