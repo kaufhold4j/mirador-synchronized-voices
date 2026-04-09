@@ -117,19 +117,36 @@ const SyncNavigationUI = ({
     setIsInitialized(false);
     setError(null);
 
-    // Finde erstes Manifest mit synchronized-voices
-    const manifestEntry = Object.entries(manifests || {}).find(
-      ([id, manifestData]) => {
-        const manifest = manifestData?.json;
-        if (!manifest) return false;
+    const configManifestId = config?.synchronizedVoices?.manifestId;
+    let manifestEntry = null;
 
+    if (configManifestId && manifests[configManifestId]) {
+      const manifestData = manifests[configManifestId];
+      const manifest = manifestData?.json;
+      if (manifest) {
         const result = detectSynchronizedVoices(manifest);
         if (result) {
+          manifestEntry = [configManifestId, manifestData];
           setWorks(result.workMetadata);
         }
-        return result !== null;
       }
-    );
+    }
+
+    if (!manifestEntry) {
+      // Finde erstes Manifest mit synchronized-voices
+      manifestEntry = Object.entries(manifests || {}).find(
+        ([id, manifestData]) => {
+          const manifest = manifestData?.json;
+          if (!manifest) return false;
+
+          const result = detectSynchronizedVoices(manifest);
+          if (result) {
+            setWorks(result.workMetadata);
+          }
+          return result !== null;
+        }
+      );
+    }
 
     if (!manifestEntry) {
       setError("Kein Stimmbuch-Manifest gefunden");

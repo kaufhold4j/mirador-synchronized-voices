@@ -72,11 +72,23 @@ const onWindowAdd = function* (action) {
 */
 }
 
+const onStartup = function* () {
+  const manifestId: string | undefined = yield select((state: any) => state.config?.synchronizedVoices?.manifestId);
+  if (manifestId) {
+    yield put({
+      type: 'mirador/ADD_RESOURCE',
+      manifestId,
+      manifestJson: null,
+    });
+  }
+}
+
 const pluginSaga = function* () {
   /* `takeEvery` calls the associated function every time the action is dispatched */
   yield takeEvery('mirador/SET_CANVAS', onCanvasChange);
   yield takeEvery('mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT', onLayoutChange);
   yield takeEvery('mirador/ADD_WINDOW', onWindowAdd);
+  yield* onStartup();
 }
 
 
