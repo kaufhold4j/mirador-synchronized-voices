@@ -4,7 +4,6 @@
  */
 
 import {
-  getCanvasesForPage,
   getCanvasesForCurrentPosition,
 } from "./VoiceDetector";
 
@@ -25,14 +24,6 @@ class SyncController {
     }
 
     this.manifest = manifest;
-    this.manifestCanvases = {};
-
-    if (manifest.items) {
-      manifest.items.forEach((canvas) => {
-        this.manifestCanvases[canvas.id] = canvas;
-      });
-    }
-
     this.voiceData = voiceData;
     this.windowMapping = windowMapping; // Map von Stimme zu Mirador Window-ID
     this.windowIdToVoiceMapping = {}; // map von Windows Id nach voice
@@ -266,97 +257,6 @@ class SyncController {
 
   getVoiceData() {
     return this.voiceData;
-  }
-
-  autoZoomWindows(dispatch) {
-    const canvases = this.getCurrentCanvases();
-    Object.entries(canvases).forEach(([voiceName, canvasId]) => {
-      const windowId = this.windowMapping[voiceName];
-      if (!windowId) {
-        console.warn(
-          `SyncController: Kein Window für Stimme "${voiceName}" gefunden`
-        );
-        return;
-      }
-      //this.autoZoomWindow(windowId, canvasId, dispatch);
-      setTimeout(() => {
-        this.autoZoomWindow(windowId, canvasId, dispatch);
-      }, 250);
-    });
-  }
-
-  autoZoomWindow(windowId, canvasId, dispatch) {
-    const canvas = this.manifestCanvases[canvasId];
-    if (!canvas) return;
-
-    const { width, height } = canvas; // v3 native dimensions
-    if (!width || !height) return;
-
-    // Mosaic cell dims:
-    const container = document.querySelector(`section[id="${windowId}-osd"]`);
-    if (!container) return;
-
-    const containerW = container.clientWidth;
-    const containerH = container.clientHeight;
-
-    /* Fit calculation
-  let containerFactor = Math.min(
-    containerW / width,
-    containerH / height
-  );
-  */
-    const relWidth = containerW / width;
-    const relHeight = containerH / height;
-    /*
-  let containerFactor = relHeight / relWidth;
-  if ( relWidth < relHeight ) {
-    containerFactor = relWidth / relHeight
-  }
-  */
-    let containerFactor = 1; //Math.min(relWidth,relHeight);
-    //bei containerFactor = 1 dann volle breite
-    if (height / width > containerH / containerW) {
-      // container ist zu flach fuer optimal darstellung
-      containerFactor = containerH / containerW / (height / width);
-    }
-
-    let imageFactor = 0.00045;
-    if (height / width > 1.2) {
-      imageFactor = 0.00028;
-    } else if (height / width < 0.8) {
-      imageFactor = 0.00045;
-    }
-
-    const scale = imageFactor * containerFactor;
-
-    // Minimal offset for centering:
-    const x = width / 2;
-    const y = height / 2;
-    console.log(
-      windowId +
-        ": x: " +
-        x +
-        ", y: " +
-        y +
-        ", zoom:" +
-        scale +
-        " relHeight: " +
-        relHeight +
-        " relWidth: " +
-        relWidth +
-        " containerFactor " +
-        containerFactor
-    );
-
-    dispatch({
-      type: "mirador/UPDATE_VIEWPORT",
-      windowId,
-      payload: {
-        x,
-        y,
-        zoom: scale,
-      },
-    });
   }
 
   /**

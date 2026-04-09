@@ -38,8 +38,21 @@ const miradorInstance = Mirador.viewer(config, [...Plugin]);
 setTimeout(() => {
   miradorInstance.store.dispatch({
     type: 'mirador/ADD_RESOURCE',
-    manifestId: config.catalog[3].manifestId,
+    manifestId: config.catalog[0].manifestId,
     manifestJson: null, // Wird automatisch geladen
   });
 
 }, 1000);
+/*
+setTimeout(async () => {
+  const response = await fetch('/mock-manifest.json');
+  const manifestJson = await response.json();
+
+  miradorInstance.store.dispatch({
+    type: 'mirador/ADD_RESOURCE',
+    manifestId: 'http://localhost:5173/mock-manifest.json',
+    manifestJson: manifestJson,
+  });
+
+}, 1000);
+*/

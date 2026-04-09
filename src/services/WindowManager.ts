@@ -129,7 +129,7 @@ class WindowManager {
       for (let i = 0; i < this.windowConfigs.length; i++) {
         const config = { ...this.windowConfigs[i], companionWindows: [] };
          dispatch({ type: 'mirador/ADD_WINDOW', window: config});
-        await new Promise((resolve) => setTimeout(resolve, 100)); // kleine Pause für Store-Update
+        //await new Promise((resolve) => setTimeout(resolve, 1)); // kleine Pause für Store-Update
       }
 
       // Jetzt Mosaic-Layout erzeugen
@@ -185,7 +185,7 @@ class WindowManager {
 
   const rows = best.rows;
   const cols = best.cols;
-
+/*
   console.log(
     "buildMosaicLayout",
     "W", W,
@@ -195,6 +195,7 @@ class WindowManager {
     "rows", rows,
     "cols", cols
   );
+*/
 
   // 2. Fenster in Reihen einsortieren
   const rowsArr = [];
