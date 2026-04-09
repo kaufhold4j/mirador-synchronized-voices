@@ -8,7 +8,10 @@ import WindowVoiceInfo from './components/WindowVoiceInfo';
 import { detectSynchronizedVoices } from './services/VoiceDetector';
 import { setCanvasForWindow } from  './services/SyncController';
 
+const getViewerForWindow = (state, windowId) => state.viewers[windowId];
+
 const onCanvasChange = function* (action) {
+    console.log("onCanvasChange", action);
   const controller = yield select(state => state.synchronizedVoices.controller);
 
   if (!controller) {
@@ -18,38 +21,55 @@ const onCanvasChange = function* (action) {
   controller.setCanvasForWindow(action.canvasId, action.windowId);
 
   // Reset zoom to "fit" after canvas change with a small delay
+  /*
   yield delay(100);
   yield put(Mirador.actions.updateViewport(action.windowId, {
     zoom: undefined,
     x: undefined,
     y: undefined,
   }));
+*/
 }
 
 const onLayoutChange = function* () {
+
   const windows = yield select(state => state.windows);
+  console.log("onLayoutChange", windows);
   if (!windows) return;
 
+    /*
   yield delay(100);
   for (const windowId of Object.keys(windows)) {
+      console.log(windowId);
+      const viewerState = yield select(getViewerForWindow, windowId);
+        if (viewerState && viewerState.osdInstance) {
+          viewerState.osdInstance.viewport.goHome();
+        } else {
     yield put(Mirador.actions.updateViewport(windowId, {
-      zoom: undefined,
+      zoom: 1,
       x: undefined,
       y: undefined,
     }));
+    }
+
   }
+*/
+
+
 }
 
 const onWindowAdd = function* (action) {
+    console.log("onWindowAdd", action);
   const windowId = action.window?.id;
   if (!windowId) return;
-
+/*
   yield delay(100);
   yield put(Mirador.actions.updateViewport(windowId, {
     zoom: undefined,
     x: undefined,
     y: undefined,
   }));
+*/
 }
 
 const pluginSaga = function* () {

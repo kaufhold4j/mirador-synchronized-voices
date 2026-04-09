@@ -35,6 +35,15 @@ const config = {
 const miradorInstance = Mirador.viewer(config, [...Plugin]);
 
 // Manifest nach kurzer Verzögerung laden
+setTimeout(() => {
+  miradorInstance.store.dispatch({
+    type: 'mirador/ADD_RESOURCE',
+    manifestId: config.catalog[0].manifestId,
+    manifestJson: null, // Wird automatisch geladen
+  });
+
+}, 1000);
+/*
 setTimeout(async () => {
   const response = await fetch('/mock-manifest.json');
   const manifestJson = await response.json();
@@ -46,3 +55,4 @@ setTimeout(async () => {
   });
 
 }, 1000);
+*/

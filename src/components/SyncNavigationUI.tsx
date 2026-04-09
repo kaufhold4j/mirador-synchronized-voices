@@ -44,6 +44,7 @@ const SyncNavigationUI = ({
   updateWorkspaceMosaicLayout,
   initController,
 }) => {
+    console.log("SyncNavigationUI", manifests);
   const theme = useTheme();
   // State
   const [syncController, setSyncController] = useState(null);
