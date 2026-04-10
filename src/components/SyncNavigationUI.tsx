@@ -142,6 +142,16 @@ const SyncNavigationUI = ({
 
     async function initialize() {
       try {
+        // 0. Remove original window if it exists
+        Object.values(windows || {}).forEach((window: any) => {
+          if (
+            window.manifestId === manifestId &&
+            !window.id.startsWith("voice-window")
+          ) {
+            removeWindow(window.id);
+          }
+        });
+
         // 1. WindowManager erstellen
         const wm = new WindowManager(voiceData, manifestId, {
           windowIdPrefix: "voice-window",

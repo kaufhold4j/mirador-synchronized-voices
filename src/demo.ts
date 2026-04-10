@@ -31,7 +31,7 @@ const config = {
   },
   windows: [{
                   manifestId:
-                    "https://api-dev.digitale-sammlungen.de/iiif-v3/presentation/v3/bsb00071107/manifest",
+                    "https://api-dev.digitale-sammlungen.de/iiif-v3/presentation/v3/bsb00083911/manifest",
                   view: "single",
                 },],
 };
