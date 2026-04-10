@@ -29,12 +29,16 @@ const config = {
   window: {
     allowFullscreen: true,
   },
-  windows: [],
+  windows: [{
+                  manifestId:
+                    "https://api-dev.digitale-sammlungen.de/iiif-v3/presentation/v3/bsb00071107/manifest",
+                  view: "single",
+                },],
 };
 
 const miradorInstance = Mirador.viewer(config, [...Plugin]);
 
-// Manifest nach kurzer Verzögerung laden
+/* Manifest nach kurzer Verzögerung laden
 setTimeout(() => {
   miradorInstance.store.dispatch({
     type: 'mirador/ADD_RESOURCE',
@@ -43,7 +47,7 @@ setTimeout(() => {
   });
 
 }, 1000);
-/*
+
 setTimeout(async () => {
   const response = await fetch('/mock-manifest.json');
   const manifestJson = await response.json();
