@@ -152,23 +152,25 @@ const SyncNavigationUI = ({
           thumbnailNavigationPosition: "off",
         });
 
+     // 3b. Remove original window if it exists
+            Object.values(windows || {}).forEach((window: any) => {
+              if (
+                window.manifestId === manifestId &&
+                !window.id.startsWith("voice-window")
+              ) {
+                setTimeout(() => {
+                  removeWindow(window.id);
+                }, 500);
+              }
+            });
+
         // 2. Windows erstellen
         wm.createWindows(0);
 
         // 3. Windows zu Mirador hinzufügen
         await wm.addWindowsToMirador(dispatch);
 
-        // 3b. Remove original window if it exists
-        Object.values(windows || {}).forEach((window: any) => {
-          if (
-            window.manifestId === manifestId &&
-            !window.id.startsWith("voice-window")
-          ) {
-            setTimeout(() => {
-              removeWindow(window.id);
-            }, 500);
-          }
-        });
+
 
         // 4. SyncController erstellen
         const sc = new SyncController(manifest, voiceData);
