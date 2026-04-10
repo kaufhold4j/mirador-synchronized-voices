@@ -28,12 +28,22 @@ if (label.de && Array.isArray(label.de) && label.de.length > 0) {
  * - Ende der Stimme = nächster Stimmen-Range oder Ende des Buches
  */
 export const detectSynchronizedVoices = (manifest) => {
-  if (!manifest || !Array.isArray(manifest.structures)) {
-    console.warn("VoiceDetector: Manifest hat keine structures");
+  if (!manifest) {
+    return null;
+  }
+
+  if (!Array.isArray(manifest.structures) || manifest.structures.length === 0) {
+    console.warn("VoiceDetector: Manifest hat keine structures", manifest.id);
     return null;
   }
 
   // 1. Stimmen-Ranges anhand des Labels erkennen
+  // Wir schauen in structures[0].items
+  if (!Array.isArray(manifest.structures[0].items)) {
+     console.warn("VoiceDetector: structures[0] hat keine items", manifest.id);
+     return null;
+  }
+
   const voiceRanges = manifest.structures[0].items.filter((range) => {
     const label = extractLabel(range.label);
     return label && label.startsWith("Stimme:");

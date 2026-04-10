@@ -149,6 +149,11 @@ const SyncNavigationUI = ({
     }
 
     if (!manifestEntry) {
+      const isFetching = Object.values(manifests || {}).some(m => m.isFetching);
+      if (isFetching || (configManifestId && !manifests[configManifestId])) {
+         // Still waiting for manifest to be added to store or finished fetching
+         return;
+      }
       setError("Kein Stimmbuch-Manifest gefunden");
       return;
     }
@@ -203,7 +208,7 @@ const SyncNavigationUI = ({
         windowManager.removeAllWindows(dispatch);
       }
     };
-  }, [manifests, dispatch]); // dispatch zu dependencies hinzugefügt
+  }, [manifests, dispatch, config]); // config zu dependencies hinzugefügt
 
   useEffect(() => {
     if (!syncController) {
