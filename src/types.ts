@@ -1,5 +1,5 @@
 // ============================================================================
-// src/types/index.ts
+// src/types.ts
 // Zentrale Type-Definitionen für das Plugin
 // ============================================================================
 
@@ -29,7 +29,7 @@ export interface IIIFRange {
   id: string;
   type: 'Range';
   label?: LanguageMap;
-  items?: (string | IIIFRange)[];
+  items?: (string | { id: string; type: string } | IIIFRange)[];
   behavior?: string[];
   metadata?: Metadata[];
 }
@@ -47,6 +47,7 @@ export interface Metadata {
  * VoiceDetector Types
  */
 export interface VoiceData {
+  manifest: IIIFManifest;
   voices: string[];
   voiceMapping: VoiceMapping;
   voiceMetadata: VoiceMetadataMap;
@@ -98,7 +99,7 @@ export interface WindowConfig {
   manifestId: string;
   canvasId: string;
   voiceName: string;
-  layoutOrder: number;
+  layoutOrder?: number;
   thumbnailNavigationPosition: string;
   view: string;
   companionWindows: any[];
@@ -121,6 +122,8 @@ export interface WindowManagerOptions {
   allowMaximize?: boolean;
   allowWindowSideBar?: boolean;
   view?: string;
+  layoutOrder?: number;
+  sideBarPanel?: string | null;
 }
 
 export interface WindowMapping {
@@ -150,9 +153,9 @@ export interface CanvasMap {
 }
 
 export interface ViewportPayload {
-  x: number;
-  y: number;
-  zoom: number;
+  x?: number;
+  y?: number;
+  zoom?: number;
 }
 
 export type PageChangeListener = (pageIndex: number, canvases: CanvasesForPage) => void;
@@ -169,6 +172,37 @@ export interface DebugInfo {
   windowMapping: WindowMapping;
   canNavigateNext?: boolean;
   canNavigatePrevious?: boolean;
+}
+
+/**
+ * SyncController Interface for circular dependencies
+ */
+export interface ISyncController {
+  manifest: IIIFManifest;
+  voiceData: VoiceData;
+  windowMapping: WindowMapping;
+  syncEnabled: boolean;
+  setWindowMapping(mapping: WindowMapping): void;
+  addPageChangeListener(callback: PageChangeListener): void;
+  removePageChangeListener(callback: PageChangeListener): void;
+  setCanvasForWindow(canvasId: string, windowId: string): void;
+  navigateNext(dispatch: DispatchFunction): boolean;
+  navigatePrevious(dispatch: DispatchFunction): boolean;
+  navigateLast(dispatch: DispatchFunction): boolean;
+  navigateToPage(pageIndex: number, dispatch: DispatchFunction): boolean;
+  navigateToWork(workId: number, dispatch: DispatchFunction): boolean;
+  updateAllWindows(dispatch: DispatchFunction): void;
+  getCurrentCanvases(): CanvasesForPage;
+  getTotalPages(): number;
+  setSyncEnabled(enabled: boolean): void;
+  isSyncEnabled(): boolean;
+  getVoices(): string[];
+  getCanvasesForVoice(voiceName: string): string[];
+  getVoice(windowId: string): string | undefined;
+  getVoiceMetadata(voiceName: string): VoiceMetadata | null;
+  getVoiceData(): VoiceData;
+  getDebugInfo(): DebugInfo;
+  getCurrentPageNumber?(): number;
 }
 
 /**
@@ -209,7 +243,7 @@ export interface UpdateWorkspaceMosaicLayoutAction {
 
 export interface InitControllerAction {
   type: 'sync/initController';
-  controller: any; // SyncController (circular dependency)
+  controller: ISyncController;
 }
 
 export interface AddVoiceWindowsAction {
@@ -232,7 +266,9 @@ export type PluginAction =
   | UpdateWorkspaceMosaicLayoutAction
   | InitControllerAction
   | AddVoiceWindowsAction
-  | VoiceWindowsReadyAction;
+  | VoiceWindowsReadyAction
+  | { type: 'SET_SYNC_MODE'; enabled: boolean }
+  | { type: 'SET_VOICE_MAPPING'; mapping: WindowMapping };
 
 /**
  * Redux State Types
@@ -251,9 +287,11 @@ export interface MiradorManifest {
 }
 
 export interface SynchronizedVoicesState {
-  controller?: any; // SyncController
+  controller?: ISyncController;
   windowsReady?: boolean;
   windowIds?: string[];
+  syncEnabled?: boolean;
+  voiceMapping?: WindowMapping;
 }
 
 export interface PluginState {
@@ -276,16 +314,16 @@ export interface SyncNavigationUIProps {
   removeWindow: (windowId: string) => void;
   updateWindow: (windowId: string, payload: Partial<WindowConfig>) => void;
   updateWorkspaceMosaicLayout: (layout: MosaicNode) => void;
-  initController: (controller: any) => void;
+  initController: (controller: ISyncController) => void;
 }
 
 export interface WindowVoiceInfoProps {
   windowId: string;
   canvasId?: string;
-  controller?: any; // SyncController
+  controller?: ISyncController;
 }
 
 /**
  * Dispatch Function Type
  */
-export type DispatchFunction = (action: PluginAction) => void;
+export type DispatchFunction = (action: PluginAction | any) => void;

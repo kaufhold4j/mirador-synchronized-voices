@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
-import { Popover, List, ListItem, ListItemText } from "@mui/material";
+import { Popover, List, ListItem, ListItemButton, ListItemText } from "@mui/material";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 
 import {
@@ -22,20 +22,26 @@ import KeyboardDoubleArrowLeftIcon from "@mui/icons-material/KeyboardDoubleArrow
 
 import {
   detectSynchronizedVoices,
-  detectWorks,
-  detectWorksPerVoice,
 } from "../services/VoiceDetector";
 import SyncController from "../services/SyncController";
 import WindowManager from "../services/WindowManager";
+import {
+  SyncNavigationUIProps,
+  VoiceData,
+  WorkMetadataMap,
+  PluginAction,
+  ISyncController,
+  IIIFManifest
+} from "../types";
 
 /**
  * SyncNavigationUI Component
  * Haupt-UI für synchronisierte Navigation zwischen Stimmen
  */
-const SyncNavigationUI = ({
+const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
   windows,
   manifests,
-  config,
+  config: _config,
   setCanvas,
   updateViewport,
   addWindow,
@@ -44,20 +50,20 @@ const SyncNavigationUI = ({
   updateWorkspaceMosaicLayout,
   initController,
 }) => {
-    console.log("SyncNavigationUI", manifests);
   const theme = useTheme();
+
   // State
-  const [syncController, setSyncController] = useState(null);
-  const [windowManager, setWindowManager] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [works, setWorks] = useState([]);
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [error, setError] = useState(null);
-  const [anchorEl, setAnchorEl] = useState(null);
+  const [syncController, setSyncController] = useState<ISyncController | null>(null);
+  const [windowManager, setWindowManager] = useState<WindowManager | null>(null);
+  const [_currentPage, setCurrentPage] = useState<number>(1);
+  const [works, setWorks] = useState<WorkMetadataMap>({});
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
 
   // Dispatch-Funktion die die Props nutzt
   const dispatch = useCallback(
-    (action) => {
+    (action: PluginAction) => {
       switch (action.type) {
         case "mirador/SET_CANVAS":
           if (setCanvas) {
@@ -119,11 +125,11 @@ const SyncNavigationUI = ({
 
     // Finde erstes Manifest mit synchronized-voices
     const manifestEntry = Object.entries(manifests || {}).find(
-      ([id, manifestData]) => {
+      ([, manifestData]) => {
         const manifest = manifestData?.json;
         if (!manifest) return false;
 
-        const result = detectSynchronizedVoices(manifest);
+        const result = detectSynchronizedVoices(manifest as IIIFManifest);
         if (result) {
           setWorks(result.workMetadata);
         }
@@ -137,8 +143,8 @@ const SyncNavigationUI = ({
     }
 
     const [manifestId, manifestData] = manifestEntry;
-    const manifest = manifestData?.json || manifestData;
-    const voiceData = detectSynchronizedVoices(manifest);
+    const manifest = (manifestData?.json || manifestData) as IIIFManifest;
+    const voiceData = detectSynchronizedVoices(manifest) as VoiceData;
 
     async function initialize() {
       if (isInitialized || windowManager) return;
@@ -152,42 +158,40 @@ const SyncNavigationUI = ({
           thumbnailNavigationPosition: "off",
         });
 
-     // 3b. Remove original window if it exists
-            Object.values(windows || {}).forEach((window: any) => {
-              if (
-                window.manifestId === manifestId &&
-                !window.id.startsWith("voice-window")
-              ) {
-                setTimeout(() => {
-                  removeWindow(window.id);
-                }, 500);
-              }
-            });
+        // 2. Remove original window if it exists
+        Object.values(windows || {}).forEach((window: any) => {
+          if (
+            window.manifestId === manifestId &&
+            !window.id.startsWith("voice-window")
+          ) {
+            setTimeout(() => {
+              removeWindow(window.id);
+            }, 500);
+          }
+        });
 
-        // 2. Windows erstellen
+        // 3. Windows erstellen
         wm.createWindows(0);
 
-        // 3. Windows zu Mirador hinzufügen
+        // 4. Windows zu Mirador hinzufügen
         await wm.addWindowsToMirador(dispatch);
 
-
-
-        // 4. SyncController erstellen
+        // 5. SyncController erstellen
         const sc = new SyncController(manifest, voiceData);
         sc.setWindowMapping(wm.getWindowMapping());
 
-        // 5. Page-Change-Listener
+        // 6. Page-Change-Listener
         sc.addPageChangeListener((pageIndex) => {
           setCurrentPage(pageIndex + 1);
         });
 
-        // 6. State setzen
+        // 7. State setzen
         setWindowManager(wm);
         setSyncController(sc);
         setCurrentPage(1);
         setIsInitialized(true);
 
-      } catch (err) {
+      } catch (err: any) {
         console.error("SyncNavigationUI: Fehler bei Initialisierung:", err);
         setError(`Initialisierungsfehler: ${err.message}`);
       }
@@ -197,15 +201,12 @@ const SyncNavigationUI = ({
 
     // Cleanup
     return () => {
-      if (windowManager) {
-        windowManager.removeAllWindows(dispatch);
-      }
+      // Logic for cleanup handled by Redux or parent if needed
     };
-  }, [manifests, dispatch]); // dispatch zu dependencies hinzugefügt
+  }, [manifests, dispatch, removeWindow]); // added removeWindow to dependencies
 
   useEffect(() => {
     if (!syncController) {
-      console.warn("SyncNavigationUI:: SyncController not defined.");
       return;
     }
 
@@ -225,9 +226,10 @@ const SyncNavigationUI = ({
       // 1. Recalculate Mosaic layout based on new viewport dimensions
       const windowConfigs = windowManager.getWindowConfigs();
       const ids = windowConfigs.map((c) => c.id);
-      // @ts-expect-error - _buildMosaicLayout is a private method but we need it for responsive layout
       const layout = windowManager._buildMosaicLayout(ids);
-      dispatch({ type: "mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT", layout });
+      if (layout) {
+        dispatch({ type: "mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT", layout });
+      }
     });
 
     observer.observe(workspace);
@@ -262,7 +264,7 @@ const SyncNavigationUI = ({
   }, [syncController, dispatch]);
 
   const handleJumpToWork = useCallback(
-    (id) => {
+    (id: number) => {
       if (syncController) {
         syncController.navigateToWork(id, dispatch);
       }
@@ -270,7 +272,7 @@ const SyncNavigationUI = ({
     [syncController, dispatch]
   );
 
-  const openPopover = (event) => {
+  const openPopover = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
@@ -414,19 +416,22 @@ const SyncNavigationUI = ({
         >
           <Paper square style={{ width: 350 }}>
             <List dense>
-              {Object.values(works).map((work, idx) => (
+              {Object.values(works).map((work) => (
                 <ListItem
-                  button
-                  key={work.id}
-                  onClick={() => {
-                    closePopover();
-                    handleJumpToWork(work.werkId);
-                  }}
+                  key={work.werkId}
+                  disablePadding
                 >
-                  <ListItemText
-                    primary={work.label}
-                    secondary={`Stimmen: ${Object.keys(work.occurrences)}`}
-                  />
+                  <ListItemButton
+                    onClick={() => {
+                      closePopover();
+                      handleJumpToWork(work.werkId);
+                    }}
+                  >
+                    <ListItemText
+                      primary={work.label}
+                      secondary={`Stimmen: ${Object.keys(work.occurrences).join(", ")}`}
+                    />
+                  </ListItemButton>
                 </ListItem>
               ))}
             </List>
