@@ -4,12 +4,23 @@
  */
 
 import {
+  IIIFManifest,
+  VoiceData,
+  WindowMapping,
+  PageChangeListener,
+  CanvasesForPage,
+  DebugInfo,
+  DispatchFunction,
+  ISyncController,
+  VoiceMetadata,
+} from '../types';
+import {
   getCanvasesForCurrentPosition,
 } from "./VoiceDetector";
 
-const reverseMapping = (o) =>
+const reverseMapping = (o: Record<string, string>): Record<string, string[]> =>
   Object.keys(o).reduce(
-    (r, k) => Object.assign(r, { [o[k]]: (r[o[k]] || []).concat(k) }),
+    (r: Record<string, string[]>, k: string) => Object.assign(r, { [o[k]]: (r[o[k]] || []).concat(k) }),
     {}
   );
 
@@ -17,35 +28,39 @@ const reverseMapping = (o) =>
  * SyncController Klasse
  * Zentrale Steuerung für synchronisiertes Blättern
  */
-class SyncController {
-  constructor(manifest, voiceData, windowMapping = {}) {
+class SyncController implements ISyncController {
+  public manifest: IIIFManifest;
+  public voiceData: VoiceData;
+  public windowMapping: WindowMapping; // Map von Stimme zu Mirador Window-ID
+  public windowIdToVoiceMapping: Record<string, string[]> = {}; // map von Windows Id nach voice
+  public syncEnabled: boolean = true;
+  private listeners: PageChangeListener[] = [];
+
+  constructor(manifest: IIIFManifest, voiceData: VoiceData, windowMapping: WindowMapping = {}) {
     if (!voiceData) {
       throw new Error("SyncController: voiceData ist erforderlich");
     }
 
     this.manifest = manifest;
     this.voiceData = voiceData;
-    this.windowMapping = windowMapping; // Map von Stimme zu Mirador Window-ID
-    this.windowIdToVoiceMapping = {}; // map von Windows Id nach voice
-    this.syncEnabled = true;
-    this.listeners = [];
-
+    this.windowMapping = windowMapping;
+    this.setWindowMapping(windowMapping);
   }
 
   /**
    * Setzt das Window-Mapping (Stimme -> Window-ID)
-   * @param {Object} mapping - Map von Stimmen-Namen zu Window-IDs
+   * @param {WindowMapping} mapping - Map von Stimmen-Namen zu Window-IDs
    */
-  setWindowMapping(mapping) {
+  public setWindowMapping(mapping: WindowMapping): void {
     this.windowMapping = mapping;
     this.windowIdToVoiceMapping = reverseMapping(mapping);
   }
 
   /**
    * Registriert einen Listener für Page-Change-Events
-   * @param {Function} callback - Callback(pageIndex, canvases)
+   * @param {PageChangeListener} callback - Callback(pageIndex, canvases)
    */
-  addPageChangeListener(callback) {
+  public addPageChangeListener(callback: PageChangeListener): void {
     if (typeof callback === "function") {
       this.listeners.push(callback);
     }
@@ -53,28 +68,46 @@ class SyncController {
 
   /**
    * Entfernt einen Page-Change-Listener
-   * @param {Function} callback - Der zu entfernende Callback
+   * @param {PageChangeListener} callback - Der zu entfernende Callback
    */
-  removePageChangeListener(callback) {
+  public removePageChangeListener(callback: PageChangeListener): void {
     this.listeners = this.listeners.filter((listener) => listener !== callback);
   }
 
-  setCanvasForWindow(canvasId, windowId) {
+  public setCanvasForWindow(canvasId: string, windowId: string): void {
+    const voiceNames = this.windowIdToVoiceMapping[windowId];
+    if (!voiceNames) return;
 
-    const voiceName = this.windowIdToVoiceMapping[windowId];
+    voiceNames.forEach(voiceName => {
+      const canvases = this.voiceData.voiceMapping[voiceName];
+      const meta = this.voiceData.voiceMetadata[voiceName];
+      if (canvases && meta) {
+        const currentPosition = canvases.indexOf(canvasId);
+        if (currentPosition >= 0) {
+          meta.currentPosition = currentPosition;
 
-    const canvases = this.voiceData.voiceMapping[voiceName];
-    const meta = this.voiceData.voiceMetadata[voiceName];
-    const currentPosition = canvases.indexOf(canvasId);
-    meta.currentPosition = currentPosition;
+          // Notify listeners if this is the primary voice or something changed
+          this.notifyListeners();
+        }
+      }
+    });
+  }
+
+  private notifyListeners(): void {
+    // We assume the first voice's position for global page index
+    const firstVoice = this.voiceData.voices[0];
+    const pageIndex = this.voiceData.voiceMetadata[firstVoice]?.currentPosition || 0;
+    const currentCanvases = this.getCurrentCanvases();
+
+    this.listeners.forEach(listener => listener(pageIndex, currentCanvases));
   }
 
   /**
    * Navigiert zur nächsten Seite
-   * @param {Function} dispatch - Redux dispatch Funktion
+   * @param {DispatchFunction} dispatch - Redux dispatch Funktion
    * @returns {boolean} - true wenn Navigation erfolgreich
    */
-  navigateNext(dispatch) {
+  public navigateNext(dispatch: DispatchFunction): boolean {
     Object.keys(this.voiceData.voiceMetadata).forEach((voiceName) => {
       const meta = this.voiceData.voiceMetadata[voiceName];
       // Nur erhöhen, wenn wir nicht am Ende der Stimme sind
@@ -82,21 +115,23 @@ class SyncController {
         meta.currentPosition += 1;
       }
     });
+
     if (this.syncEnabled) {
       this.updateAllWindows(dispatch);
     }
+    this.notifyListeners();
     return true;
   }
 
   /**
    * Navigiert zur vorherigen Seite
-   * @param {Function} dispatch - Redux dispatch Funktion
+   * @param {DispatchFunction} dispatch - Redux dispatch Funktion
    * @returns {boolean} - true wenn Navigation erfolgreich
    */
-  navigatePrevious(dispatch) {
+  public navigatePrevious(dispatch: DispatchFunction): boolean {
     Object.keys(this.voiceData.voiceMetadata).forEach((voiceName) => {
       const meta = this.voiceData.voiceMetadata[voiceName];
-      // Nur erhöhen, wenn wir nicht am Ende der Stimme sind
+      // Nur verringern, wenn wir nicht am Anfang der Stimme sind
       if (meta.currentPosition > 0) {
         meta.currentPosition -= 1;
       } 
@@ -105,30 +140,30 @@ class SyncController {
     if (this.syncEnabled) {
       this.updateAllWindows(dispatch);
     }
+    this.notifyListeners();
     return true;
   }
 
-  navigateLast(dispatch) {
+  public navigateLast(dispatch: DispatchFunction): boolean {
     Object.keys(this.voiceData.voiceMetadata).forEach((voiceName) => {
       const meta = this.voiceData.voiceMetadata[voiceName];
-
       meta.currentPosition = this.voiceData.voiceMapping[voiceName].length - 1;
     });
 
     if (this.syncEnabled) {
       this.updateAllWindows(dispatch);
     }
-
+    this.notifyListeners();
     return true;
   }
 
   /**
    * Navigiert zu einer bestimmten Seite
    * @param {number} pageIndex - Ziel-Seitenindex (0-basiert)
-   * @param {Function} dispatch - Redux dispatch Funktion
+   * @param {DispatchFunction} dispatch - Redux dispatch Funktion
    * @returns {boolean} - true wenn Navigation erfolgreich
    */
-  navigateToPage(pageIndex, dispatch) {
+  public navigateToPage(pageIndex: number, dispatch: DispatchFunction): boolean {
     if (pageIndex < 0 || pageIndex >= this.voiceData.minPages) {
       console.warn(`SyncController: Ungültiger Seitenindex: ${pageIndex}`);
       return false;
@@ -136,23 +171,20 @@ class SyncController {
 
     Object.keys(this.voiceData.voiceMetadata).forEach((voiceName) => {
       const meta = this.voiceData.voiceMetadata[voiceName];
-      // Nur erhöhen, wenn wir nicht am Ende der Stimme sind
-
-      meta.currentPosition = pageIndex;
+      meta.currentPosition = Math.min(pageIndex, meta.pageCount - 1);
     });
 
     if (this.syncEnabled) {
       this.updateAllWindows(dispatch);
     }
-
+    this.notifyListeners();
     return true;
   }
 
-  navigateToWork(workId, dispatch) {
-    //const work = this.voiceData.workMetadata.find(w => w.id === workId);
+  public navigateToWork(workId: number, dispatch: DispatchFunction): boolean {
     const work = this.voiceData.workMetadata[workId];
     if (!work) {
-      return;
+      return false;
     } 
 
     Object.keys(this.voiceData.voiceMetadata).forEach((voiceName) => {
@@ -160,23 +192,22 @@ class SyncController {
       const offset = work.occurrences[voiceName]?.offset;
 
       if (offset !== undefined && meta !== undefined) {
-        meta.currentPosition = offset;
+        meta.currentPosition = Math.min(offset, meta.pageCount - 1);
       }
     });
 
     if (this.syncEnabled) {
       this.updateAllWindows(dispatch);
     }
-
+    this.notifyListeners();
     return true;
   }
 
   /**
    * Aktualisiert alle gemappten Windows mit den aktuellen Canvases
-   * @param {Function} dispatch - Redux dispatch Funktion
-   * @private
+   * @param {DispatchFunction} dispatch - Redux dispatch Funktion
    */
-  updateAllWindows(dispatch) {
+  public updateAllWindows(dispatch: DispatchFunction): void {
     const canvases = this.getCurrentCanvases();
 
     Object.entries(canvases).forEach(([voiceName, canvasId]) => {
@@ -200,9 +231,9 @@ class SyncController {
 
   /**
    * Gibt alle Canvas-IDs für die aktuelle Seite zurück
-   * @returns {Object} - Map von Stimme zu Canvas-ID
+   * @returns {CanvasesForPage} - Map von Stimme zu Canvas-ID
    */
-  getCurrentCanvases() {
+  public getCurrentCanvases(): CanvasesForPage {
     return getCanvasesForCurrentPosition(this.voiceData);
   }
 
@@ -210,7 +241,7 @@ class SyncController {
    * Gibt die Gesamtanzahl der Seiten zurück
    * @returns {number}
    */
-  getTotalPages() {
+  public getTotalPages(): number {
     return this.voiceData.minPages;
   }
 
@@ -218,7 +249,7 @@ class SyncController {
    * Aktiviert oder deaktiviert die Synchronisation
    * @param {boolean} enabled
    */
-  setSyncEnabled(enabled) {
+  public setSyncEnabled(enabled: boolean): void {
     this.syncEnabled = enabled;
   }
 
@@ -226,46 +257,50 @@ class SyncController {
    * Prüft ob Synchronisation aktiviert ist
    * @returns {boolean}
    */
-  isSyncEnabled() {
+  public isSyncEnabled(): boolean {
     return this.syncEnabled;
   }
 
   /**
    * Gibt die Liste der Stimmen zurück
-   * @returns {Array<string>}
+   * @returns {string[]}
    */
-  getVoices() {
+  public getVoices(): string[] {
     return this.voiceData.voices;
   }
 
-  getCanvasesForVoice(voiceName) {
-    return this.voiceData.voiceMapping[voiceName];
+  public getCanvasesForVoice(voiceName: string): string[] {
+    return this.voiceData.voiceMapping[voiceName] || [];
   }
 
-  getVoice(windowId) {
-    return this.windowIdToVoiceMapping[windowId];
+  public getVoice(windowId: string): string | undefined {
+    const voices = this.windowIdToVoiceMapping[windowId];
+    return voices && voices.length > 0 ? voices[0] : undefined;
   }
 
   /**
    * Gibt Metadaten für eine bestimmte Stimme zurück
    * @param {string} voiceName - Name der Stimme
-   * @returns {Object|null}
+   * @returns {VoiceMetadata | null}
    */
-  getVoiceMetadata(voiceName) {
+  public getVoiceMetadata(voiceName: string): VoiceMetadata | null {
     return this.voiceData.voiceMetadata[voiceName] || null;
   }
 
-  getVoiceData() {
+  public getVoiceData(): VoiceData {
     return this.voiceData;
   }
 
   /**
    * Gibt Debugging-Informationen zurück
-   * @returns {Object}
+   * @returns {DebugInfo}
    */
-  getDebugInfo() {
+  public getDebugInfo(): DebugInfo {
+    const firstVoice = this.voiceData.voices[0];
+    const currentPageNumber = (this.voiceData.voiceMetadata[firstVoice]?.currentPosition || 0) + 1;
+
     return {
-      currentPageNumber: this.getCurrentPageNumber(),
+      currentPageNumber,
       totalPages: this.getTotalPages(),
       syncEnabled: this.syncEnabled,
       voices: this.getVoices(),

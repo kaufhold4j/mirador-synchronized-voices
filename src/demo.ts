@@ -36,7 +36,7 @@ const config = {
                 },],
 };
 
-const miradorInstance = Mirador.viewer(config, [...Plugin]);
+Mirador.viewer(config, [...Plugin]);
 
 /* Manifest nach kurzer Verzögerung laden
 setTimeout(() => {

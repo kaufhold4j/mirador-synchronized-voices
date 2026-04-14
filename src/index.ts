@@ -1,47 +1,46 @@
-
-import { delay, put, select, takeEvery } from 'redux-saga/effects';
+import { takeEvery, select } from 'redux-saga/effects';
 import Mirador from 'mirador';
 
 import SyncNavigationUI from './components/SyncNavigationUI';
 import WindowVoiceInfo from './components/WindowVoiceInfo';
 
-import { detectSynchronizedVoices } from './services/VoiceDetector';
-import { setCanvasForWindow } from  './services/SyncController';
+import {
+  PluginAction,
+  PluginState,
+  ISyncController,
+  SynchronizedVoicesState,
+  SetCanvasAction,
+  AddWindowAction
+} from './types';
 
-const getViewerForWindow = (state, windowId) => state.viewers[windowId];
-
-const onCanvasChange = function* (action) {
-  const controller = yield select(state => state.synchronizedVoices.controller);
+const onCanvasChange = function* (action: SetCanvasAction): any {
+  const controller: ISyncController | undefined = yield select((state: PluginState) => state.synchronizedVoices.controller);
 
   if (!controller) {
     console.warn("No SyncController found yet.");
     return;
   }
-// daten in sync mit darstellung  halten
+  // daten in sync mit darstellung halten
   controller.setCanvasForWindow(action.canvasId, action.windowId);
 }
 
-const onLayoutChange = function* () {
-
-  const windows = yield select(state => state.windows);
+const onLayoutChange = function* (): any {
+  const windows: any = yield select((state: PluginState) => state.windows);
   if (!windows) return;
-
-
+  // Layout changes are handled in SyncNavigationUI via ResizeObserver for now
 }
 
-const onWindowAdd = function* (action) {
+const onWindowAdd = function* (action: AddWindowAction): any {
   const windowId = action.window?.id;
   if (!windowId) return;
-
 }
 
-const pluginSaga = function* () {
+const pluginSaga = function* (): any {
   /* `takeEvery` calls the associated function every time the action is dispatched */
   yield takeEvery('mirador/SET_CANVAS', onCanvasChange);
   yield takeEvery('mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT', onLayoutChange);
   yield takeEvery('mirador/ADD_WINDOW', onWindowAdd);
 }
-
 
 const SynchronizedVoicesPlugin = {
   target: 'WorkspaceControlPanelButtons',
@@ -49,47 +48,46 @@ const SynchronizedVoicesPlugin = {
   name: 'SynchronizedVoicesPlugin',
   saga: pluginSaga,
   component: SyncNavigationUI,
-  mapStateToProps: (state) => ({
+  mapStateToProps: (state: any) => ({
     windows: state.windows,
     manifests: state.manifests,
     config: state.config,
   }),
 
-  mapDispatchToProps: (dispatch) => ({
-
-    setCanvas: (windowId, canvasId) =>
+  mapDispatchToProps: (dispatch: any) => ({
+    setCanvas: (windowId: string, canvasId: string) =>
       dispatch(Mirador.actions.setCanvas(windowId, canvasId)),
 
-    updateViewport: (windowId, payload) =>
+    updateViewport: (windowId: string, payload: any) =>
       dispatch(Mirador.actions.updateViewport(windowId, payload)),
 
-    addWindow: (window) =>
+    addWindow: (window: any) =>
       dispatch(Mirador.actions.addWindow(window)),
 
-    updateWorkspaceMosaicLayout: (layout) =>
+    updateWorkspaceMosaicLayout: (layout: any) =>
       dispatch(Mirador.actions.updateWorkspaceMosaicLayout(layout)),
 
-    removeWindow: (windowId) =>
+    removeWindow: (windowId: string) =>
       dispatch({ type: 'mirador/REMOVE_WINDOW', windowId }),
 
-    updateWindow: (windowId, payload) =>
+    updateWindow: (windowId: string, payload: any) =>
       dispatch({ type: 'mirador/UPDATE_WINDOW', windowId, payload }),
 
-    initController: (controller) =>
+    initController: (controller: ISyncController) =>
       dispatch({ type: 'sync/initController', controller }),
   }),
   reducers: {
-    synchronizedVoices: (state = {}, action) => {
+    synchronizedVoices: (state: SynchronizedVoicesState = {}, action: PluginAction) => {
       switch (action.type) {
         case 'SET_SYNC_MODE':
-          return { ...state, syncEnabled: action.enabled };
+          return { ...state, syncEnabled: (action as any).enabled };
         case 'SET_VOICE_MAPPING':
-          return { ...state, voiceMapping: action.mapping };
+          return { ...state, voiceMapping: (action as any).mapping };
         case "sync/initController":
           return {
-                    ...state,
-                    controller: action.controller,
-                  };
+            ...state,
+            controller: action.controller,
+          };
         default:
           return state;
       }
@@ -101,7 +99,7 @@ const WindowVoiceInfoPlugin = {
   target: 'WindowTopBarPluginArea',
   mode: 'wrap',
   component: WindowVoiceInfo,
-  mapStateToProps: (state, { windowId }) => {
+  mapStateToProps: (state: any, { windowId }: { windowId: string }) => {
     const window = state.windows[windowId];
     const canvasId = window?.canvasId;
     return {
@@ -116,4 +114,3 @@ export default [
   SynchronizedVoicesPlugin,
   WindowVoiceInfoPlugin,
 ];
-

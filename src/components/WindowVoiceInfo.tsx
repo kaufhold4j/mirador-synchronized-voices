@@ -1,33 +1,38 @@
-// WindowVoiceInfo.js
+// WindowVoiceInfo.tsx
 import React from "react";
+import { WindowVoiceInfoProps } from "../types";
 
-export default function WindowVoiceInfo({ windowId, canvasId, controller }) {
+const WindowVoiceInfo: React.FC<WindowVoiceInfoProps> = ({ windowId, canvasId, controller }) => {
 
-  if (!controller) {
-    return;
+  if (!controller || !canvasId) {
+    return null;
   }
+
   // Stimme extrahieren
   const voiceName = controller.getVoice(windowId);
   const voiceData = controller.getVoiceData();
-  if(!voiceData) return;
+  if(!voiceData || !voiceName) return null;
+
   const meta = voiceData.voiceMetadata[voiceName];
-  if (!meta) return;
+  if (!meta) return null;
+
   const canvases = controller.getCanvasesForVoice(voiceName);
   const pageIndex = canvases.indexOf(canvasId);
   const pageNumber = pageIndex >= 0 ? pageIndex + 1 : "?";
 
   const works = voiceData.workMetadata;
-  let workPageIndex = "-";
-  let workLabel = "-";
+  let workPageIndex: string | number = "-";
+  let workLabel: string = "-";
 
    Object.keys(works).forEach(function (key) {
-     const work = works[key];
+     const work = works[parseInt(key, 10)];
+     if (!work) return;
 
      const occurrence = work.occurrences[voiceName];
      if ( !occurrence || occurrence.offset > pageIndex){
         return;
      }
-     workPageIndex = pageNumber - occurrence.offset;
+     workPageIndex = (pageIndex - occurrence.offset) + 1;
      workLabel = key;
    });
 
@@ -57,3 +62,5 @@ export default function WindowVoiceInfo({ windowId, canvasId, controller }) {
       </div>
     );
 }
+
+export default WindowVoiceInfo;
