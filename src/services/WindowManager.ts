@@ -243,6 +243,55 @@ class WindowManager {
   }
 
   /**
+   * Fügt eine Stimme dynamisch hinzu
+   * @param {string} voiceName - Name der Stimme
+   * @param {number} pageIndex - Seiten-Index (0-basiert)
+   * @param {DispatchFunction} dispatch - Redux dispatch Funktion
+   * @returns {string|null} - Die erstellte Window-ID oder null
+   */
+  public addVoiceWindow(voiceName: string, pageIndex: number, dispatch: DispatchFunction): string | null {
+    if (this.windowMapping[voiceName]) return this.windowMapping[voiceName];
+
+    const canvases = this.voiceData.voiceMapping[voiceName];
+    if (!canvases || canvases.length === 0) return null;
+
+    const initialCanvas = canvases[Math.min(pageIndex, canvases.length - 1)];
+    const config = createWindowConfig(
+      this.manifestId,
+      initialCanvas,
+      voiceName,
+      {},
+      this.options
+    );
+
+    this.windowConfigs.push(config);
+    // Sortieren nach der ursprünglichen Reihenfolge in voiceData.voices
+    this.windowConfigs.sort((a, b) => {
+      return this.voiceData.voices.indexOf(a.voiceName) - this.voiceData.voices.indexOf(b.voiceName);
+    });
+
+    this.windowMapping[voiceName] = config.id;
+
+    dispatch({ type: 'mirador/ADD_WINDOW', window: config });
+    return config.id;
+  }
+
+  /**
+   * Entfernt eine Stimme dynamisch
+   * @param {string} voiceName - Name der Stimme
+   * @param {DispatchFunction} dispatch - Redux dispatch Funktion
+   */
+  public removeVoiceWindow(voiceName: string, dispatch: DispatchFunction): void {
+    const windowId = this.windowMapping[voiceName];
+    if (!windowId) return;
+
+    dispatch({ type: 'mirador/REMOVE_WINDOW', windowId });
+
+    this.windowConfigs = this.windowConfigs.filter(c => c.voiceName !== voiceName);
+    delete this.windowMapping[voiceName];
+  }
+
+  /**
    * Entfernt alle verwalteten Windows
    * @param {DispatchFunction} dispatch - Redux dispatch Funktion
    */

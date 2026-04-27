@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 
-import { Popover, List, ListItem, ListItemButton, ListItemText } from "@mui/material";
+import { Popover, List, ListItem, ListItemButton, ListItemText, Checkbox, ListItemIcon } from "@mui/material";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
+import RecordVoiceOverIcon from "@mui/icons-material/RecordVoiceOver";
 
 import {
   Box,
@@ -55,11 +56,14 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
   // State
   const [syncController, setSyncController] = useState<ISyncController | null>(null);
   const [windowManager, setWindowManager] = useState<WindowManager | null>(null);
-  const [_currentPage, setCurrentPage] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [works, setWorks] = useState<WorkMetadataMap>({});
+  const [voiceData, setVoiceData] = useState<VoiceData | null>(null);
+  const [enabledVoices, setEnabledVoices] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const [voiceAnchorEl, setVoiceAnchorEl] = useState<HTMLButtonElement | null>(null);
 
   // Dispatch-Funktion die die Props nutzt
   const dispatch = useCallback(
@@ -144,13 +148,15 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
 
     const [manifestId, manifestData] = manifestEntry;
     const manifest = (manifestData?.json || manifestData) as IIIFManifest;
-    const voiceData = detectSynchronizedVoices(manifest) as VoiceData;
+    const detectedVoiceData = detectSynchronizedVoices(manifest) as VoiceData;
+    setVoiceData(detectedVoiceData);
+    setEnabledVoices(detectedVoiceData.voices);
 
     async function initialize() {
       if (isInitialized || windowManager) return;
       try {
         // 1. WindowManager erstellen
-        const wm = new WindowManager(voiceData, manifestId, {
+        const wm = new WindowManager(detectedVoiceData, manifestId, {
           windowIdPrefix: "voice-window",
           allowClose: false,
           allowMaximize: false,
@@ -177,7 +183,7 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
         await wm.addWindowsToMirador(dispatch);
 
         // 5. SyncController erstellen
-        const sc = new SyncController(manifest, voiceData);
+        const sc = new SyncController(manifest, detectedVoiceData);
         sc.setWindowMapping(wm.getWindowMapping());
 
         // 6. Page-Change-Listener
@@ -272,6 +278,36 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
     [syncController, dispatch]
   );
 
+  const handleToggleVoice = useCallback((voiceName: string) => {
+    if (!windowManager || !syncController) return;
+
+    const isEnabled = enabledVoices.includes(voiceName);
+    const newEnabledVoices = isEnabled
+      ? enabledVoices.filter(v => v !== voiceName)
+      : [...enabledVoices, voiceName];
+
+    if (newEnabledVoices.length === 0) return; // Mindestens eine Stimme muss aktiv bleiben
+
+    setEnabledVoices(newEnabledVoices);
+
+    if (isEnabled) {
+      windowManager.removeVoiceWindow(voiceName, dispatch);
+    } else {
+      windowManager.addVoiceWindow(voiceName, currentPage - 1, dispatch);
+    }
+
+    // Update SyncController mapping
+    syncController.setWindowMapping(windowManager.getWindowMapping());
+
+    // Update Mosaic layout
+    const windowConfigs = windowManager.getWindowConfigs();
+    const ids = windowConfigs.map((c) => c.id);
+    const layout = windowManager._buildMosaicLayout(ids);
+    if (layout) {
+      dispatch({ type: "mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT", layout });
+    }
+  }, [windowManager, syncController, enabledVoices, currentPage, dispatch]);
+
   const openPopover = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -280,7 +316,16 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
     setAnchorEl(null);
   };
 
+  const openVoicePopover = (event: React.MouseEvent<HTMLButtonElement>) => {
+    setVoiceAnchorEl(event.currentTarget);
+  };
+
+  const closeVoicePopover = () => {
+    setVoiceAnchorEl(null);
+  };
+
   const open = Boolean(anchorEl);
+  const voiceOpen = Boolean(voiceAnchorEl);
   const hasWorks = works && Object.keys(works).length > 0;
 
   /**
@@ -376,6 +421,69 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
       <Divider flexItem />
 
       <div>
+        <Tooltip title="Stimmen auswählen">
+          <span>
+            <IconButton
+              onClick={openVoicePopover}
+              size="large"
+              style={{
+                marginLeft: 8,
+                minWidth: 36,
+                padding: "10px 8px",
+              }}
+            >
+              <RecordVoiceOverIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
+
+        <Popover
+          open={voiceOpen}
+          anchorEl={voiceAnchorEl}
+          onClose={closeVoicePopover}
+          anchorOrigin={{
+            vertical: "bottom",
+            horizontal: "left",
+          }}
+          transformOrigin={{
+            vertical: "top",
+            horizontal: "left",
+          }}
+          PaperProps={{
+            style: {
+              maxHeight: 400,
+              maxWidth: 250,
+              overflowY: "auto",
+              padding: 0,
+            },
+          }}
+        >
+          <Paper square style={{ width: 250 }}>
+            <List dense>
+              {voiceData?.voices.map((voiceName) => (
+                <ListItem
+                  key={voiceName}
+                  disablePadding
+                >
+                  <ListItemButton
+                    onClick={() => handleToggleVoice(voiceName)}
+                  >
+                    <ListItemIcon>
+                      <Checkbox
+                        edge="start"
+                        checked={enabledVoices.includes(voiceName)}
+                        disableRipple
+                        disabled={enabledVoices.length === 1 && enabledVoices.includes(voiceName)}
+                      />
+                    </ListItemIcon>
+                    <ListItemText primary={voiceName} />
+                  </ListItemButton>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        </Popover>
+
         <Tooltip title={hasWorks ? "Werke anzeigen" : "Keine Werke vorhanden"}>
           <span>
             <IconButton
@@ -385,7 +493,7 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
               style={{
                 marginLeft: 8,
                 minWidth: 36,
-                padding: "20px 8px",
+                padding: "10px 8px",
               }}
             >
               <LibraryMusicIcon />
