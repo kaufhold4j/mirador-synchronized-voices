@@ -1,4 +1,4 @@
-import { takeEvery, select } from 'redux-saga/effects';
+import { takeEvery, select, put, delay } from 'redux-saga/effects';
 import Mirador from 'mirador';
 
 import SyncNavigationUI from './components/SyncNavigationUI';
@@ -22,17 +22,44 @@ const onCanvasChange = function* (action: SetCanvasAction): any {
   }
   // daten in sync mit darstellung halten
   controller.setCanvasForWindow(action.canvasId, action.windowId);
+
+  // Viewport anpassen (fit to window)
+  yield delay(100);
+  yield put(Mirador.actions.updateViewport(action.windowId, {
+    x: undefined,
+    y: undefined,
+    zoom: undefined
+  }));
 }
 
 const onLayoutChange = function* (): any {
   const windows: any = yield select((state: PluginState) => state.windows);
   if (!windows) return;
-  // Layout changes are handled in SyncNavigationUI via ResizeObserver for now
+
+  yield delay(100);
+
+  // Alle Stimmen-Fenster anpassen
+  for (const windowId of Object.keys(windows)) {
+    if (windowId.startsWith('voice-window')) {
+      yield put(Mirador.actions.updateViewport(windowId, {
+        x: undefined,
+        y: undefined,
+        zoom: undefined
+      }));
+    }
+  }
 }
 
 const onWindowAdd = function* (action: AddWindowAction): any {
   const windowId = action.window?.id;
-  if (!windowId) return;
+  if (!windowId || !windowId.startsWith('voice-window')) return;
+
+  yield delay(100);
+  yield put(Mirador.actions.updateViewport(windowId, {
+    x: undefined,
+    y: undefined,
+    zoom: undefined
+  }));
 }
 
 const pluginSaga = function* (): any {
