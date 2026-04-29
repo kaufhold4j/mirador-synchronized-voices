@@ -1,4 +1,5 @@
-import { takeEvery, select } from 'redux-saga/effects';
+import { useEffect } from 'react';
+import { takeEvery, select, delay } from 'redux-saga/effects';
 import Mirador from 'mirador';
 
 import SyncNavigationUI from './components/SyncNavigationUI';
@@ -24,10 +25,19 @@ const onCanvasChange = function* (action: SetCanvasAction): any {
   controller.setCanvasForWindow(action.canvasId, action.windowId);
 }
 
+const OSDReferences = new Map<string, any>();
+
 const onLayoutChange = function* (): any {
+  yield delay(100);
   const windows: any = yield select((state: PluginState) => state.windows);
   if (!windows) return;
-  // Layout changes are handled in SyncNavigationUI via ResizeObserver for now
+
+  Object.keys(windows).forEach(windowId => {
+    const viewer = OSDReferences.get(windowId);
+    if (viewer && viewer.viewport) {
+      viewer.viewport.goHome(true);
+    }
+  });
 }
 
 const onWindowAdd = function* (action: AddWindowAction): any {
@@ -110,7 +120,29 @@ const WindowVoiceInfoPlugin = {
   },
 };
 
+const OpenSeadragonViewerPluginComponent = ({ windowId, viewer }: { windowId: string, viewer: any }) => {
+  useEffect(() => {
+    if (viewer) {
+      OSDReferences.set(windowId, viewer);
+    }
+    return () => {
+      OSDReferences.delete(windowId);
+    };
+  }, [windowId, viewer]);
+  return null;
+};
+
+const OpenSeadragonViewerPlugin = {
+  target: 'OpenSeadragonViewer',
+  mode: 'add',
+  component: OpenSeadragonViewerPluginComponent,
+  mapStateToProps: (_state: any, { windowId }: { windowId: string }) => ({
+    windowId,
+  }),
+};
+
 export default [
   SynchronizedVoicesPlugin,
   WindowVoiceInfoPlugin,
+  OpenSeadragonViewerPlugin,
 ];
