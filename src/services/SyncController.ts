@@ -34,6 +34,7 @@ class SyncController implements ISyncController {
   public windowMapping: WindowMapping; // Map von Stimme zu Mirador Window-ID
   public windowIdToVoiceMapping: Record<string, string[]> = {}; // map von Windows Id nach voice
   public syncEnabled: boolean = true;
+  public standardWindowId: string | null = null;
   private listeners: PageChangeListener[] = [];
 
   constructor(manifest: IIIFManifest, voiceData: VoiceData, windowMapping: WindowMapping = {}) {
@@ -56,6 +57,10 @@ class SyncController implements ISyncController {
     this.windowIdToVoiceMapping = reverseMapping(mapping);
   }
 
+  public setStandardWindowId(windowId: string | null): void {
+    this.standardWindowId = windowId;
+  }
+
   /**
    * Registriert einen Listener für Page-Change-Events
    * @param {PageChangeListener} callback - Callback(pageIndex, canvases)
@@ -75,7 +80,25 @@ class SyncController implements ISyncController {
   }
 
   public setCanvasForWindow(canvasId: string, windowId: string): void {
-    const voiceNames = this.windowIdToVoiceMapping[windowId];
+    let voiceNames = this.windowIdToVoiceMapping[windowId];
+
+    // If it's the standard window, we treat it as updating all voices based on the canvasId
+    if (windowId === this.standardWindowId) {
+      // Find which page this canvasId corresponds to in the first voice (as a reference)
+      const firstVoice = this.voiceData.voices[0];
+      const canvases = this.voiceData.voiceMapping[firstVoice];
+      const pageIndex = canvases.indexOf(canvasId);
+
+      if (pageIndex >= 0) {
+        this.navigateToPage(pageIndex, (_action) => {
+          // We don't have a real dispatch here, but navigateToPage updates internal state
+          // and usually calls updateAllWindows which we want to avoid infinite loops.
+          // But navigateToPage in SyncController updates metadata and then optionally updates windows.
+        });
+        return;
+      }
+    }
+
     if (!voiceNames) return;
 
     voiceNames.forEach(voiceName => {
@@ -209,6 +232,19 @@ class SyncController implements ISyncController {
    */
   public updateAllWindows(dispatch: DispatchFunction): void {
     const canvases = this.getCurrentCanvases();
+
+    // Update standard window if it exists
+    if (this.standardWindowId) {
+      const firstVoice = this.voiceData.voices[0];
+      const canvasId = canvases[firstVoice];
+      if (canvasId) {
+        dispatch({
+          type: "mirador/SET_CANVAS",
+          windowId: this.standardWindowId,
+          canvasId,
+        });
+      }
+    }
 
     Object.entries(canvases).forEach(([voiceName, canvasId]) => {
       const windowId = this.windowMapping[voiceName];

@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Popover, List, ListItem, ListItemButton, ListItemText, Checkbox, ListItemIcon } from "@mui/material";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 import RecordVoiceOverIcon from "@mui/icons-material/RecordVoiceOver";
+import MenuBookIcon from "@mui/icons-material/MenuBook";
+import AutoAwesomeMosaicIcon from "@mui/icons-material/AutoAwesomeMosaic";
 
 import {
   Box,
@@ -43,6 +45,8 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
   windows,
   manifests,
   config: _config,
+  isVoiceView,
+  standardWindowId,
   setCanvas,
   updateViewport,
   addWindow,
@@ -50,6 +54,8 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
   updateWindow,
   updateWorkspaceMosaicLayout,
   initController,
+  setIsVoiceView,
+  setStandardWindowId,
 }) => {
   const theme = useTheme();
 
@@ -104,6 +110,16 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
             initController(action.controller);
           }
           break;
+        case "SET_IS_VOICE_VIEW":
+          if (setIsVoiceView) {
+            setIsVoiceView(action.enabled);
+          }
+          break;
+        case "SET_STANDARD_WINDOW_ID":
+          if (setStandardWindowId) {
+            setStandardWindowId(action.windowId);
+          }
+          break;
         default:
           console.log("Unhandled action:", action.type);
       }
@@ -153,6 +169,20 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
     setEnabledVoices(detectedVoiceData.voices);
 
     async function initialize() {
+      // Find original window if it exists
+      let originalWindowId = standardWindowId;
+      if (!originalWindowId) {
+        const foundWindow = Object.values(windows || {}).find(
+          (window: any) =>
+            window.manifestId === manifestId &&
+            !window.id.startsWith("voice-window")
+        );
+        if (foundWindow) {
+          originalWindowId = foundWindow.id;
+          dispatch({ type: "SET_STANDARD_WINDOW_ID", windowId: originalWindowId });
+        }
+      }
+
       if (isInitialized || windowManager) return;
       try {
         // 1. WindowManager erstellen
@@ -164,27 +194,27 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
           thumbnailNavigationPosition: "off",
         });
 
-        // 2. Remove original window if it exists
-        Object.values(windows || {}).forEach((window: any) => {
-          if (
-            window.manifestId === manifestId &&
-            !window.id.startsWith("voice-window")
-          ) {
-            setTimeout(() => {
-              removeWindow(window.id);
-            }, 500);
-          }
-        });
-
-        // 3. Windows erstellen
-        wm.createWindows(0);
-
-        // 4. Windows zu Mirador hinzufügen
-        await wm.addWindowsToMirador(dispatch);
-
         // 5. SyncController erstellen
         const sc = new SyncController(manifest, detectedVoiceData);
-        sc.setWindowMapping(wm.getWindowMapping());
+        if (originalWindowId) {
+          sc.setStandardWindowId(originalWindowId);
+        }
+
+        if (isVoiceView) {
+          // 2. Remove original window if it exists
+          if (originalWindowId) {
+            setTimeout(() => {
+              removeWindow(originalWindowId!);
+            }, 500);
+          }
+
+          // 3. Windows erstellen
+          wm.createWindows(0);
+
+          // 4. Windows zu Mirador hinzufügen
+          await wm.addWindowsToMirador(dispatch);
+          sc.setWindowMapping(wm.getWindowMapping());
+        }
 
         // 6. Page-Change-Listener
         sc.addPageChangeListener((pageIndex) => {
@@ -278,8 +308,68 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
     [syncController, dispatch]
   );
 
-  const handleToggleVoice = useCallback((voiceName: string) => {
+  const handleToggleView = useCallback(() => {
     if (!windowManager || !syncController) return;
+
+    const newIsVoiceView = !isVoiceView;
+    dispatch({ type: "SET_IS_VOICE_VIEW", enabled: newIsVoiceView });
+
+    const firstVoice = voiceData!.voices[0];
+    const currentCanvasId = syncController.getCurrentCanvases()[firstVoice];
+
+    if (newIsVoiceView) {
+      // Switch to Voice View
+      // 1. Remove standard window
+      if (standardWindowId) {
+        removeWindow(standardWindowId);
+        dispatch({ type: "SET_STANDARD_WINDOW_ID", windowId: null });
+        syncController.setStandardWindowId(null);
+      }
+
+      // 2. Add voice windows
+      windowManager.createWindows(currentPage - 1);
+      windowManager.addWindowsToMirador(dispatch).then(() => {
+        syncController.setWindowMapping(windowManager.getWindowMapping());
+      });
+    } else {
+      // Switch to Standard View
+      // 1. Remove voice windows
+      windowManager.removeAllWindows(dispatch);
+      syncController.setWindowMapping({});
+
+      // 2. Add standard window
+      const newStandardWindowId = `standard-window-${Date.now()}`;
+      addWindow({
+        id: newStandardWindowId,
+        manifestId: voiceData!.manifest.id,
+        canvasId: currentCanvasId,
+        thumbnailNavigationPosition: "off",
+        view: "single",
+        companionWindows: [],
+        companionWindowIds: [],
+        allowClose: true,
+        allowMaximize: true,
+        allowFullscreen: true,
+        allowWindowSideBar: true,
+        sideBarPanel: null,
+      });
+      dispatch({ type: "SET_STANDARD_WINDOW_ID", windowId: newStandardWindowId });
+      syncController.setStandardWindowId(newStandardWindowId);
+    }
+  }, [
+    isVoiceView,
+    windowManager,
+    syncController,
+    standardWindowId,
+    voiceData,
+    currentPage,
+    removeWindow,
+    addWindow,
+    dispatch,
+  ]);
+
+  const handleToggleVoice = useCallback((voiceName: string) => {
+    if (!windowManager || !syncController || !isVoiceView) return;
 
     const isEnabled = enabledVoices.includes(voiceName);
     const newEnabledVoices = isEnabled
@@ -377,7 +467,13 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
         borderRadius: 1,
       }}
     >
-      {/* Sync-Toggle */}
+      {/* View Toggle */}
+      <Tooltip title={isVoiceView ? "Standardansicht" : "Stimmenansicht"}>
+        <IconButton onClick={handleToggleView}>
+          {isVoiceView ? <MenuBookIcon /> : <AutoAwesomeMosaicIcon />}
+        </IconButton>
+      </Tooltip>
+
       <Divider flexItem />
 
       {/* Blätter-Buttons */}
@@ -426,6 +522,7 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
             <IconButton
               onClick={openVoicePopover}
               size="large"
+              disabled={!isVoiceView}
               style={{
                 marginLeft: 8,
                 minWidth: 36,

@@ -98,7 +98,7 @@ export interface WindowConfig {
   id: string;
   manifestId: string;
   canvasId: string;
-  voiceName: string;
+  voiceName?: string;
   layoutOrder?: number;
   thumbnailNavigationPosition: string;
   view: string;
@@ -182,7 +182,9 @@ export interface ISyncController {
   voiceData: VoiceData;
   windowMapping: WindowMapping;
   syncEnabled: boolean;
+  standardWindowId: string | null;
   setWindowMapping(mapping: WindowMapping): void;
+  setStandardWindowId(windowId: string | null): void;
   addPageChangeListener(callback: PageChangeListener): void;
   removePageChangeListener(callback: PageChangeListener): void;
   setCanvasForWindow(canvasId: string, windowId: string): void;
@@ -268,7 +270,9 @@ export type PluginAction =
   | AddVoiceWindowsAction
   | VoiceWindowsReadyAction
   | { type: 'SET_SYNC_MODE'; enabled: boolean }
-  | { type: 'SET_VOICE_MAPPING'; mapping: WindowMapping };
+  | { type: 'SET_VOICE_MAPPING'; mapping: WindowMapping }
+  | { type: 'SET_IS_VOICE_VIEW'; enabled: boolean }
+  | { type: 'SET_STANDARD_WINDOW_ID'; windowId: string | null };
 
 /**
  * Redux State Types
@@ -292,6 +296,8 @@ export interface SynchronizedVoicesState {
   windowIds?: string[];
   syncEnabled?: boolean;
   voiceMapping?: WindowMapping;
+  isVoiceView?: boolean;
+  standardWindowId?: string | null;
 }
 
 export interface PluginState {
@@ -308,6 +314,8 @@ export interface SyncNavigationUIProps {
   windows: { [windowId: string]: MiradorWindow };
   manifests: { [manifestId: string]: MiradorManifest };
   config: any;
+  isVoiceView: boolean;
+  standardWindowId: string | null;
   setCanvas: (windowId: string, canvasId: string) => void;
   updateViewport: (windowId: string, payload: ViewportPayload) => void;
   addWindow: (window: WindowConfig) => void;
@@ -315,6 +323,8 @@ export interface SyncNavigationUIProps {
   updateWindow: (windowId: string, payload: Partial<WindowConfig>) => void;
   updateWorkspaceMosaicLayout: (layout: MosaicNode) => void;
   initController: (controller: ISyncController) => void;
+  setIsVoiceView: (enabled: boolean) => void;
+  setStandardWindowId: (windowId: string | null) => void;
 }
 
 export interface WindowVoiceInfoProps {

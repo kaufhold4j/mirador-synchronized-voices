@@ -62,6 +62,8 @@ const SynchronizedVoicesPlugin = {
     windows: state.windows,
     manifests: state.manifests,
     config: state.config,
+    isVoiceView: state.synchronizedVoices?.isVoiceView ?? false,
+    standardWindowId: state.synchronizedVoices?.standardWindowId ?? null,
   }),
 
   mapDispatchToProps: (dispatch: any) => ({
@@ -85,14 +87,24 @@ const SynchronizedVoicesPlugin = {
 
     initController: (controller: ISyncController) =>
       dispatch({ type: 'sync/initController', controller }),
+
+    setIsVoiceView: (enabled: boolean) =>
+      dispatch({ type: 'SET_IS_VOICE_VIEW', enabled }),
+
+    setStandardWindowId: (windowId: string | null) =>
+      dispatch({ type: 'SET_STANDARD_WINDOW_ID', windowId }),
   }),
   reducers: {
-    synchronizedVoices: (state: SynchronizedVoicesState = {}, action: PluginAction) => {
+    synchronizedVoices: (state: SynchronizedVoicesState = { isVoiceView: false, standardWindowId: null }, action: PluginAction) => {
       switch (action.type) {
         case 'SET_SYNC_MODE':
           return { ...state, syncEnabled: (action as any).enabled };
         case 'SET_VOICE_MAPPING':
           return { ...state, voiceMapping: (action as any).mapping };
+        case 'SET_IS_VOICE_VIEW':
+          return { ...state, isVoiceView: action.enabled };
+        case 'SET_STANDARD_WINDOW_ID':
+          return { ...state, standardWindowId: action.windowId };
         case "sync/initController":
           return {
             ...state,

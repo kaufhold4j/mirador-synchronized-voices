@@ -267,7 +267,7 @@ class WindowManager {
     this.windowConfigs.push(config);
     // Sortieren nach der ursprünglichen Reihenfolge in voiceData.voices
     this.windowConfigs.sort((a, b) => {
-      return this.voiceData.voices.indexOf(a.voiceName) - this.voiceData.voices.indexOf(b.voiceName);
+      return this.voiceData.voices.indexOf(a.voiceName!) - this.voiceData.voices.indexOf(b.voiceName!);
     });
 
     this.windowMapping[voiceName] = config.id;
