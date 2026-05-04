@@ -3,6 +3,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Popover, List, ListItem, ListItemButton, ListItemText, Checkbox, ListItemIcon } from "@mui/material";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 import RecordVoiceOverIcon from "@mui/icons-material/RecordVoiceOver";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
+import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
 
 import {
   Box,
@@ -64,6 +67,9 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [voiceAnchorEl, setVoiceAnchorEl] = useState<HTMLButtonElement | null>(null);
+  // Neuer State für den View-Mode
+  const [isVoiceMode, setIsVoiceMode] = useState<boolean>(false);
+  const [originalWindowId, setOriginalWindowId] = useState<string | null>(null);
 
   // Dispatch-Funktion die die Props nutzt
   const dispatch = useCallback(
@@ -152,56 +158,43 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
     setVoiceData(detectedVoiceData);
     setEnabledVoices(detectedVoiceData.voices);
 
-    async function initialize() {
-      if (isInitialized || windowManager) return;
-      try {
-        // 1. WindowManager erstellen
-        const wm = new WindowManager(detectedVoiceData, manifestId, {
-          windowIdPrefix: "voice-window",
-          allowClose: false,
-          allowMaximize: false,
-          allowWindowSideBar: false,
-          thumbnailNavigationPosition: "off",
-        });
-
-        // 2. Remove original window if it exists
-        Object.values(windows || {}).forEach((window: any) => {
-          if (
-            window.manifestId === manifestId &&
-            !window.id.startsWith("voice-window")
-          ) {
-            setTimeout(() => {
-              removeWindow(window.id);
-            }, 500);
-          }
-        });
-
-        // 3. Windows erstellen
-        wm.createWindows(0);
-
-        // 4. Windows zu Mirador hinzufügen
-        await wm.addWindowsToMirador(dispatch);
-
-        // 5. SyncController erstellen
-        const sc = new SyncController(manifest, detectedVoiceData);
-        sc.setWindowMapping(wm.getWindowMapping());
-
-        // 6. Page-Change-Listener
-        sc.addPageChangeListener((pageIndex) => {
-          setCurrentPage(pageIndex + 1);
-        });
-
-        // 7. State setzen
-        setWindowManager(wm);
-        setSyncController(sc);
-        setCurrentPage(1);
-        setIsInitialized(true);
-
-      } catch (err: any) {
-        console.error("SyncNavigationUI: Fehler bei Initialisierung:", err);
-        setError(`Initialisierungsfehler: ${err.message}`);
-      }
+async function initialize() {
+  if (isInitialized || windowManager) return;
+  try {
+    // 1. Originales Window-ID merken (nicht entfernen!)
+    const originalWindow = Object.values(windows || {}).find((w: any) =>
+      w.manifestId === manifestId && !w.id.startsWith('voice-window')
+    ) as any;
+    if (originalWindow) {
+      setOriginalWindowId(originalWindow.id);
     }
+
+    // 2. WindowManager erstellen (aber noch keine Windows hinzufügen)
+    const wm = new WindowManager(detectedVoiceData, manifestId, {
+      windowIdPrefix: 'voice-window',
+      allowClose: false,
+      allowMaximize: false,
+      allowWindowSideBar: false,
+      thumbnailNavigationPosition: 'off',
+    });
+    wm.createWindows(0);
+
+    // 3. SyncController erstellen
+    const sc = new SyncController(manifest, detectedVoiceData);
+    sc.addPageChangeListener((pageIndex) => {
+      setCurrentPage(pageIndex + 1);
+    });
+
+    // 4. State setzen — aber isVoiceMode bleibt false
+    setWindowManager(wm);
+    setSyncController(sc);
+    setCurrentPage(1);
+    setIsInitialized(true);
+
+  } catch (err: any) {
+    setError(`Initialisierungsfehler: ${err.message}`);
+  }
+}
 
     initialize();
 
@@ -308,6 +301,85 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
     }
   }, [windowManager, syncController, enabledVoices, currentPage, dispatch]);
 
+
+const handleToggleViewMode = useCallback(async () => {
+  if (!windowManager || !syncController) return;
+
+  if (!isVoiceMode) {
+    // ── Normal → Voice ──────────────────────────────────────────
+
+    // 1. Originales Fenster entfernen
+    if (originalWindowId) {
+      removeWindow(originalWindowId);
+    }
+
+    // 2. Alle evtl. noch vorhandenen Voice-Windows entfernen
+    Object.keys(windows || {})
+      .filter(id => id.startsWith('voice-window'))
+      .forEach(id => removeWindow(id));
+
+    // 3. Mosaic-Layout komplett zurücksetzen
+    updateWorkspaceMosaicLayout(null);
+
+    // 4. Warten bis Mirador State + Mosaic sauber sind
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // 5. Voice-Windows frisch hinzufügen
+    await windowManager.addWindowsToMirador(dispatch, []);
+
+    // 6. SyncController-Mapping aktualisieren
+    syncController.setWindowMapping(windowManager.getWindowMapping());
+    dispatch({ type: 'sync/initController', controller: syncController });
+
+    setIsVoiceMode(true);
+
+  } else {
+    // ── Voice → Normal ──────────────────────────────────────────
+
+    // 1. Alle Voice-Windows entfernen
+    windowManager.removeAllWindows(dispatch);
+
+    windowManager.createWindows(currentPage - 1);
+
+    // 2. Mosaic-Layout zurücksetzen
+    updateWorkspaceMosaicLayout(null);
+
+    // 3. Warten
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // 4. Originales Fenster wiederherstellen
+    if (originalWindowId) {
+      const manifestEntry = Object.entries(manifests || {}).find(
+        ([, m]) => detectSynchronizedVoices((m as any)?.json as IIIFManifest)
+      );
+      if (manifestEntry) {
+        const [manifestId] = manifestEntry;
+        const firstVoice = voiceData?.voices[0];
+        const currentCanvasId = firstVoice
+          ? voiceData?.voiceMapping[firstVoice][currentPage - 1]
+          : undefined;
+
+        addWindow({
+          id: originalWindowId,
+          manifestId,
+          canvasId: currentCanvasId,
+          allowClose: true,
+          allowMaximize: true,
+          allowWindowSideBar: true,
+          thumbnailNavigationPosition: 'off',
+          view: 'single',
+        });
+      }
+    }
+
+    setIsVoiceMode(false);
+  }
+}, [
+  isVoiceMode, windowManager, syncController,
+  originalWindowId, dispatch, removeWindow, addWindow,
+  updateWorkspaceMosaicLayout, manifests, voiceData, currentPage, windows
+]);
+
   const openPopover = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
   };
@@ -378,7 +450,33 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
       }}
     >
       {/* Sync-Toggle */}
-      <Divider flexItem />
+     <Divider flexItem />
+
+     {/* View-Mode Toggle */}
+     <Tooltip title={isVoiceMode ? 'Zur Normalansicht' : 'Stimmen-Ansicht'} arrow>
+       <FormControlLabel
+         control={
+           <Switch
+             checked={isVoiceMode}
+             onChange={handleToggleViewMode}
+             disabled={!isInitialized}
+             size="small"
+             color="primary"
+           />
+         }
+         label={
+           <ContentCopyIcon
+             fontSize="small"
+             sx={{ color: isVoiceMode ? 'primary.main' : 'text.secondary' }}
+           />
+         }
+         labelPlacement="top"
+         sx={{ margin: 0, gap: 0 }}
+       />
+     </Tooltip>
+
+
+     <Divider flexItem />
 
       {/* Blätter-Buttons */}
       <Tooltip title="erste Seite" arrow>
@@ -419,6 +517,9 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
       </Tooltip>
 
       <Divider flexItem />
+
+
+
 
       <div>
         <Tooltip title="Stimmen auswählen">
