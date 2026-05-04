@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Popover, List, ListItem, ListItemButton, ListItemText, Checkbox, ListItemIcon } from "@mui/material";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 import RecordVoiceOverIcon from "@mui/icons-material/RecordVoiceOver";
+import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import Switch from "@mui/material/Switch";
 import FormControlLabel from "@mui/material/FormControlLabel";
 
@@ -464,7 +465,7 @@ const handleToggleViewMode = useCallback(async () => {
            />
          }
          label={
-           <RecordVoiceOverIcon
+           <ContentCopyIcon
              fontSize="small"
              sx={{ color: isVoiceMode ? 'primary.main' : 'text.secondary' }}
            />
