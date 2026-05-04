@@ -310,24 +310,21 @@ const handleToggleViewMode = useCallback(async () => {
       removeWindow(originalWindowId);
     }
 
-    // 2. Sicherstellen dass keine Voice-Windows mehr im State sind
-    //    (Schutz gegen doppeltes Hinzufügen beim 2. Toggle)
-    const currentWindowIds = Object.keys(windows || {});
-    const staleVoiceWindows = currentWindowIds.filter(id =>
-      id.startsWith('voice-window')
-    );
-    staleVoiceWindows.forEach(id => removeWindow(id));
+    // 2. Alle evtl. noch vorhandenen Voice-Windows entfernen
+    Object.keys(windows || {})
+      .filter(id => id.startsWith('voice-window'))
+      .forEach(id => removeWindow(id));
 
-    // 3. Kurz warten bis Mirador State bereinigt ist
-    await new Promise(resolve => setTimeout(resolve, 150));
+    // 3. Mosaic-Layout komplett zurücksetzen
+    updateWorkspaceMosaicLayout(null);
 
-    // 4. Voice-Windows hinzufügen — existierende IDs übergeben
-    const freshWindowIds = Object.keys(windows || {}).filter(
-      id => !staleVoiceWindows.includes(id)
-    );
-    await windowManager.addWindowsToMirador(dispatch, freshWindowIds);
+    // 4. Warten bis Mirador State + Mosaic sauber sind
+    await new Promise(resolve => setTimeout(resolve, 300));
 
-    // 5. SyncController-Mapping aktualisieren
+    // 5. Voice-Windows frisch hinzufügen
+    await windowManager.addWindowsToMirador(dispatch, []);
+
+    // 6. SyncController-Mapping aktualisieren
     syncController.setWindowMapping(windowManager.getWindowMapping());
     dispatch({ type: 'sync/initController', controller: syncController });
 
@@ -339,10 +336,13 @@ const handleToggleViewMode = useCallback(async () => {
     // 1. Alle Voice-Windows entfernen
     windowManager.removeAllWindows(dispatch);
 
-    // 2. Kurz warten
-    await new Promise(resolve => setTimeout(resolve, 150));
+    // 2. Mosaic-Layout zurücksetzen
+    updateWorkspaceMosaicLayout(null);
 
-    // 3. Originales Fenster wiederherstellen
+    // 3. Warten
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // 4. Originales Fenster wiederherstellen
     if (originalWindowId) {
       const manifestEntry = Object.entries(manifests || {}).find(
         ([, m]) => detectSynchronizedVoices((m as any)?.json as IIIFManifest)
@@ -372,9 +372,8 @@ const handleToggleViewMode = useCallback(async () => {
 }, [
   isVoiceMode, windowManager, syncController,
   originalWindowId, dispatch, removeWindow, addWindow,
-  manifests, voiceData, currentPage, windows
+  updateWorkspaceMosaicLayout, manifests, voiceData, currentPage, windows
 ]);
-
 
   const openPopover = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);

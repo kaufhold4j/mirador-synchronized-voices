@@ -312,6 +312,7 @@ class WindowManager {
    * @returns {WindowMapping}
    */
   public getWindowMapping(): WindowMapping {
+      console.log("WindowsMangager.getWindowMapping", this.windowMapping)
     return { ...this.windowMapping };
   }
 
