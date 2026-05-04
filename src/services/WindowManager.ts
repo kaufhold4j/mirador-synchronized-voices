@@ -122,21 +122,21 @@ class WindowManager {
    * @param {DispatchFunction} dispatch - Redux dispatch Funktion
    * @returns {Promise<void>}
    */
-  public async addWindowsToMirador(dispatch: DispatchFunction): Promise<void> {
-    if (this.windowConfigs.length === 0) {
-      console.warn('WindowManager: Keine Windows zum Hinzufügen. Rufe createWindows() zuerst auf.');
-      return;
+  public async addWindowsToMirador(dispatch: DispatchFunction, existingWindowIds: string[] = []): Promise<void> {
+    if (this.windowConfigs.length === 0) return;
+
+    for (const config of this.windowConfigs) {
+      // Nicht nochmal hinzufügen wenn bereits vorhanden
+      if (existingWindowIds.includes(config.id)) {
+        console.warn(`WindowManager: Window ${config.id} existiert bereits, überspringe.`);
+        continue;
+      }
+      const cleanConfig = { ...config, companionWindows: [] };
+      dispatch({ type: 'mirador/ADD_WINDOW', window: cleanConfig });
     }
 
-    // Windows hinzufügen
-    for (let i = 0; i < this.windowConfigs.length; i++) {
-      const config = { ...this.windowConfigs[i], companionWindows: [] };
-      dispatch({ type: 'mirador/ADD_WINDOW', window: config });
-    }
-
-    // Jetzt Mosaic-Layout erzeugen
     if (this.windowConfigs.length >= 2) {
-      const layout = this._buildMosaicLayout(this.windowConfigs.map((c) => c.id));
+      const layout = this._buildMosaicLayout(this.windowConfigs.map(c => c.id));
       if (layout) {
         dispatch({ type: 'mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT', layout });
       }
