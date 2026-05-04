@@ -336,6 +336,8 @@ const handleToggleViewMode = useCallback(async () => {
     // 1. Alle Voice-Windows entfernen
     windowManager.removeAllWindows(dispatch);
 
+    windowManager.createWindows(currentPage - 1);
+
     // 2. Mosaic-Layout zurücksetzen
     updateWorkspaceMosaicLayout(null);
 
