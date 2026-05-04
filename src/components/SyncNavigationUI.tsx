@@ -3,6 +3,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Popover, List, ListItem, ListItemButton, ListItemText, Checkbox, ListItemIcon } from "@mui/material";
 import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 import RecordVoiceOverIcon from "@mui/icons-material/RecordVoiceOver";
+import Switch from "@mui/material/Switch";
+import FormControlLabel from "@mui/material/FormControlLabel";
 
 import {
   Box,
@@ -451,18 +453,27 @@ const handleToggleViewMode = useCallback(async () => {
 
      {/* View-Mode Toggle */}
      <Tooltip title={isVoiceMode ? 'Zur Normalansicht' : 'Stimmen-Ansicht'} arrow>
-       <IconButton
-         size="small"
-         onClick={handleToggleViewMode}
-         disabled={!isInitialized}
-         sx={{
-           color: isVoiceMode ? theme.palette.primary.main : 'inherit',
-           bgcolor: isVoiceMode ? theme.palette.primary.light + '33' : 'transparent',
-         }}
-       >
-         <RecordVoiceOverIcon fontSize="small" />
-       </IconButton>
+       <FormControlLabel
+         control={
+           <Switch
+             checked={isVoiceMode}
+             onChange={handleToggleViewMode}
+             disabled={!isInitialized}
+             size="small"
+             color="primary"
+           />
+         }
+         label={
+           <RecordVoiceOverIcon
+             fontSize="small"
+             sx={{ color: isVoiceMode ? 'primary.main' : 'text.secondary' }}
+           />
+         }
+         labelPlacement="top"
+         sx={{ margin: 0, gap: 0 }}
+       />
      </Tooltip>
+
 
      <Divider flexItem />
 
