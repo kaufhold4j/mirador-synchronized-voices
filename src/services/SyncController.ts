@@ -123,6 +123,21 @@ class SyncController implements ISyncController {
     return true;
   }
 
+  public navigateToTOC(dispatch: DispatchFunction): boolean {
+    Object.keys(this.voiceData.voiceMetadata).forEach((voiceName) => {
+      const meta = this.voiceData.voiceMetadata[voiceName];
+      if (meta && meta.tocOffset !== undefined) {
+        meta.currentPosition = Math.min(meta.tocOffset, meta.pageCount - 1);
+      }
+    });
+
+    if (this.syncEnabled) {
+      this.updateAllWindows(dispatch);
+    }
+    this.notifyListeners();
+    return true;
+  }
+
   /**
    * Navigiert zur vorherigen Seite
    * @param {DispatchFunction} dispatch - Redux dispatch Funktion

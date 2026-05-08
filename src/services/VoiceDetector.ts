@@ -140,6 +140,42 @@ export const detectSynchronizedVoices = (manifest: IIIFManifest): VoiceData | nu
     };
   }
 
+  // 4. Inhaltsverzeichnis (TOC) erkennen
+  const tocCanvasIds = new Set<string>();
+
+  // Suche in Items (Canvas Labels)
+  allCanvas.forEach(canvas => {
+    const label = extractLabel(canvas.label);
+    if (label && label.includes("Inhaltsverz.")) {
+      tocCanvasIds.add(canvas.id);
+    }
+  });
+
+  // Suche in Structures (Range Labels)
+  (firstStructure.items as any[]).forEach(range => {
+    const label = extractLabel(range.label);
+    if (label && label.includes("Inhaltsverz.")) {
+      if (range.items && range.items.length > 0) {
+        const firstItem = range.items[0];
+        const canvasId = typeof firstItem === 'string' ? firstItem : firstItem.id;
+        if (canvasId) {
+          tocCanvasIds.add(canvasId);
+        }
+      }
+    }
+  });
+
+  // TOC Offsets den Stimmen zuordnen
+  Object.keys(voiceMapping).forEach(voiceName => {
+    const voiceCanvases = voiceMapping[voiceName];
+    for (let i = 0; i < voiceCanvases.length; i++) {
+      if (tocCanvasIds.has(voiceCanvases[i])) {
+        voiceMetadata[voiceName].tocOffset = i;
+        break;
+      }
+    }
+  });
+
   const voices = Object.keys(voiceMapping);
   if (voices.length === 0) return null;
 

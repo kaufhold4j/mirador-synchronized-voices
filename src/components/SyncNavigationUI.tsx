@@ -23,6 +23,7 @@ import NavigateNextIcon from "@mui/icons-material/NavigateNext";
 import { Typography } from "@mui/material";
 import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
 import KeyboardDoubleArrowLeftIcon from "@mui/icons-material/KeyboardDoubleArrowLeft";
+import TocIcon from "@mui/icons-material/Toc";
 
 import {
   detectSynchronizedVoices,
@@ -271,6 +272,12 @@ async function initialize() {
     [syncController, dispatch]
   );
 
+  const handleJumpToTOC = useCallback(() => {
+    if (syncController) {
+      syncController.navigateToTOC(dispatch);
+    }
+  }, [syncController, dispatch]);
+
   const handleToggleVoice = useCallback((voiceName: string) => {
     if (!windowManager || !syncController) return;
 
@@ -355,12 +362,12 @@ const handleToggleViewMode = useCallback(async () => {
       if (manifestEntry) {
         const [manifestId] = manifestEntry;
         const firstVoice = voiceData?.voices[0];
-        const currentCanvasId = firstVoice
-          ? voiceData?.voiceMapping[firstVoice][currentPage - 1]
-          : undefined;
+        const currentCanvasId = (firstVoice && voiceData)
+          ? voiceData.voiceMapping[firstVoice][currentPage - 1]
+          : "";
 
         addWindow({
-          id: originalWindowId,
+          id: originalWindowId as string,
           manifestId,
           canvasId: currentCanvasId,
           allowClose: true,
@@ -368,6 +375,11 @@ const handleToggleViewMode = useCallback(async () => {
           allowWindowSideBar: true,
           thumbnailNavigationPosition: 'off',
           view: 'single',
+          voiceName: "",
+          companionWindows: [],
+          companionWindowIds: [],
+          allowFullscreen: true,
+          sideBarPanel: null,
         });
       }
     }
@@ -399,6 +411,7 @@ const handleToggleViewMode = useCallback(async () => {
   const open = Boolean(anchorEl);
   const voiceOpen = Boolean(voiceAnchorEl);
   const hasWorks = works && Object.keys(works).length > 0;
+  const hasTOC = isInitialized && voiceData && Object.values(voiceData.voiceMetadata).some(meta => meta.tocOffset !== undefined);
 
   /**
    * Render: Error State
@@ -584,6 +597,23 @@ const handleToggleViewMode = useCallback(async () => {
             </List>
           </Paper>
         </Popover>
+
+        <Tooltip title={hasTOC ? "Inhaltsverzeichnisse" : "Keine Inhaltsverzeichnisse vorhanden"}>
+          <span>
+            <IconButton
+              onClick={handleJumpToTOC}
+              size="large"
+              disabled={!hasTOC}
+              style={{
+                marginLeft: 8,
+                minWidth: 36,
+                padding: "10px 8px",
+              }}
+            >
+              <TocIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
 
         <Tooltip title={hasWorks ? "Werke anzeigen" : "Keine Werke vorhanden"}>
           <span>

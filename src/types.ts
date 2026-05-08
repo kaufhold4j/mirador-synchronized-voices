@@ -72,6 +72,7 @@ export interface VoiceMetadata {
   endIndex: number;
   pageCount: number;
   currentPosition: number;
+  tocOffset?: number;
 }
 
 export interface WorkMetadataMap {
@@ -143,7 +144,7 @@ export type MosaicNode = {
   splitPercentage?: number;
   first: MosaicNode | string;
   second: MosaicNode | string;
-} | string;
+} | string | null;
 
 /**
  * SyncController Types
@@ -191,6 +192,7 @@ export interface ISyncController {
   navigateLast(dispatch: DispatchFunction): boolean;
   navigateToPage(pageIndex: number, dispatch: DispatchFunction): boolean;
   navigateToWork(workId: number, dispatch: DispatchFunction): boolean;
+  navigateToTOC(dispatch: DispatchFunction): boolean;
   updateAllWindows(dispatch: DispatchFunction): void;
   getCurrentCanvases(): CanvasesForPage;
   getTotalPages(): number;
