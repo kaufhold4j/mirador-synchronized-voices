@@ -65,6 +65,7 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
   const [voiceData, setVoiceData] = useState<VoiceData | null>(null);
   const [enabledVoices, setEnabledVoices] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+  const [currentManifestId, setCurrentManifestId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const [voiceAnchorEl, setVoiceAnchorEl] = useState<HTMLButtonElement | null>(null);
@@ -130,10 +131,6 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
    * Initialisierung: Suche nach synchronized-voices Manifest
    */
   useEffect(() => {
-    // Reset State
-    setIsInitialized(false);
-    setError(null);
-
     // Finde erstes Manifest mit synchronized-voices
     const manifestEntry = Object.entries(manifests || {}).find(
       ([, manifestData]) => {
@@ -141,26 +138,38 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
         if (!manifest) return false;
 
         const result = detectSynchronizedVoices(manifest as IIIFManifest);
-        if (result) {
-          setWorks(result.workMetadata);
-        }
         return result !== null;
       }
     );
 
     if (!manifestEntry) {
+      setIsInitialized(false);
       setError("Kein Stimmbuch-Manifest gefunden");
+      setCurrentManifestId(null);
       return;
     }
 
     const [manifestId, manifestData] = manifestEntry;
+
+    // Nur neu initialisieren, wenn es ein anderes Manifest ist oder noch nicht initialisiert wurde
+    if (isInitialized && manifestId === currentManifestId) {
+      return;
+    }
+
+    // Reset State
+    setIsInitialized(false);
+    setError(null);
+    setCurrentManifestId(manifestId);
+    setWindowManager(null);
+    setSyncController(null);
+
     const manifest = (manifestData?.json || manifestData) as IIIFManifest;
     const detectedVoiceData = detectSynchronizedVoices(manifest) as VoiceData;
     setVoiceData(detectedVoiceData);
+    setWorks(detectedVoiceData.workMetadata);
     setEnabledVoices(detectedVoiceData.voices);
 
 async function initialize() {
-  if (isInitialized || windowManager) return;
   try {
     // 1. Originales Window-ID merken (nicht entfernen!)
     const originalWindow = Object.values(windows || {}).find((w: any) =>
