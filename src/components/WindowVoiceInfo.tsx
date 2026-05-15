@@ -37,30 +37,44 @@ const WindowVoiceInfo: React.FC<WindowVoiceInfoProps> = ({ windowId, canvasId, c
    });
 
   return (
-      <div
+    <div
+      style={{
+        padding: "2px 8px",
+        fontSize: "1.2em",
+        opacity: 0.85,
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        fontWeight: 500,
+        whiteSpace: "nowrap",
+        minWidth: 0,
+      }}
+    >
+      <span
         style={{
-          padding: "2px 8px",
-          fontSize: "1.2em",
-          opacity: 0.85,
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          fontWeight: 500,
+          color: "#333",
+          flexShrink: 1,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          minWidth: 0,
         }}
+        title={voiceName}
       >
-        <span style={{ color: "#333" }}>{voiceName}</span>
+        {voiceName}
+      </span>
 
-        <span style={{ color: "#666" }}>
-          {pageNumber}
-        </span>
+      <span style={{ color: "#666", flexShrink: 0 }}>
+        {pageNumber}
+      </span>
 
-        <span style={{ color: "#aaa" }}>|</span>
+      <span style={{ color: "#aaa", flexShrink: 0 }}>|</span>
 
-        <span style={{ color: "#444" }}>
-          Werk {workLabel}:{workPageIndex}
-        </span>
-      </div>
-    );
+      <span style={{ color: "#444", flexShrink: 0 }}>
+        Werk {workLabel}:{workPageIndex}
+      </span>
+    </div>
+  );
 }
 
 export default WindowVoiceInfo;
