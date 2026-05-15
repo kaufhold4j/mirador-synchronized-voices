@@ -6,23 +6,28 @@ const config = {
   catalog: [
     {
       manifestId:
-        "https://api-dev.digitale-sammlungen.de/iiif-v3/presentation/v3/bsb00083911/manifest",
+        "https://api-dev.digitale-sammlungen.de/iiif/presentation/v3/bsb00083911/manifest",
       provider: "6 stimmen und 17 werke",
     },
     {
       manifestId:
-        "https://api-dev.digitale-sammlungen.de/iiif-v3/presentation/v3/bsb00075335/manifest",
+        "https://api-dev.digitale-sammlungen.de/iiif/presentation/v3/bsb00075335/manifest",
       provider: "querformat 4 stimmen, keine werke",
     },
     {
       manifestId:
-        "https://api-dev.digitale-sammlungen.de/iiif-v3/presentation/v3/bsb00104653/manifest",
-      provider: ", querformat , 4 stimmen , 193 werke",
+        "https://api-dev.digitale-sammlungen.de/iiif/presentation/v3/bsb00104653/manifest",
+      provider: ", querformat , 4 stimmen , 193 werke, inhaltsverzeichnisse bei 3 stimmen",
     },
     {
       manifestId:
-        "https://api-dev.digitale-sammlungen.de/iiif-v3/presentation/v3/bsb00071107/manifest",
+        "https://api-dev.digitale-sammlungen.de/iiif/presentation/v3/bsb00071107/manifest",
       provider: "18 Stimmbücher",
+    },
+    {
+      manifestId:
+        "https://api-dev.digitale-sammlungen.de/iiif/presentation/v3/bsb00073118/manifest",
+      provider: "4 Stimmbücher, keine Werke, Inhaltsverzeichnisse",
     },
   ],
   id: "demo",
@@ -31,7 +36,7 @@ const config = {
   },
   windows: [{
                   manifestId:
-                    "https://api-dev.digitale-sammlungen.de/iiif-v3/presentation/v3/bsb00083911/manifest",
+                    "https://api-dev.digitale-sammlungen.de/iiif/presentation/v3/bsb00104653/manifest",
                   view: "single",
                 },],
 };
