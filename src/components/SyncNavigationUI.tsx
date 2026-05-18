@@ -131,9 +131,17 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
    * Initialisierung: Suche nach synchronized-voices Manifest
    */
   useEffect(() => {
-    // Finde erstes Manifest mit synchronized-voices
+    // Liste aller Manifest-IDs, die aktuell in Fenstern geöffnet sind
+    const activeManifestIds = new Set(
+      Object.values(windows || {}).map((w) => w.manifestId)
+    );
+
+    // Finde erstes Manifest mit synchronized-voices unter den aktiven Fenstern
     const manifestEntry = Object.entries(manifests || {}).find(
-      ([, manifestData]) => {
+      ([manifestId, manifestData]) => {
+        // Nur Manifeste prüfen, die auch in einem Fenster offen sind
+        if (!activeManifestIds.has(manifestId)) return false;
+
         const manifest = manifestData?.json;
         if (!manifest) return false;
 
@@ -144,7 +152,7 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
 
     if (!manifestEntry) {
       setIsInitialized(false);
-      setError("Kein Stimmbuch-Manifest gefunden");
+      setError(null);
       setCurrentManifestId(null);
       return;
     }
@@ -450,13 +458,7 @@ const handleToggleViewMode = useCallback(async () => {
    * Render: Loading State
    */
   if (!isInitialized) {
-    return (
-      <Paper elevation={2} sx={{ p: 2, m: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          Lade Stimmen-Ansicht...
-        </Typography>
-      </Paper>
-    );
+    return null;
   }
 
   /**
