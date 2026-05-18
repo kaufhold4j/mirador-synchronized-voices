@@ -2,15 +2,15 @@
  * WindowManager Service
  * Erstellt und verwaltet Mirador Windows für synchronisierte Stimmen
  */
- 
- import {
+
+import {
+  DispatchFunction,
+  MosaicNode,
   VoiceData,
   WindowConfig,
   WindowManagerOptions,
   WindowMapping,
-  MosaicNode,
-  DispatchFunction,
-} from '../types';
+} from "../types";
 
 /**
  * Erstellt Window-Konfiguration für Mirador
@@ -26,22 +26,26 @@ const createWindowConfig = (
   canvasId: string,
   voiceName: string,
   position: any = {},
-  options: WindowManagerOptions = {}
+  options: WindowManagerOptions = {},
 ): WindowConfig => {
-  const windowId = `${options.windowIdPrefix || 'voice-window'}-${voiceName.toLowerCase().replace(/\s+/g, '-').replace(':', 'X')}`;
+  const windowId = `${options.windowIdPrefix || "voice-window"}-${voiceName.toLowerCase().replace(/\s+/g, "-").replace(":", "X")}`;
 
   return {
     id: windowId,
     manifestId,
     canvasId,
-    thumbnailNavigationPosition: options.thumbnailNavigationPosition || 'off',
-    view: options.view || 'single',
+    thumbnailNavigationPosition: options.thumbnailNavigationPosition || "off",
+    view: options.view || "single",
     companionWindows: [],
     companionWindowIds: [],
     allowClose: options.allowClose !== undefined ? options.allowClose : false,
-    allowMaximize: options.allowMaximize !== undefined ? options.allowMaximize : false,
+    allowMaximize:
+      options.allowMaximize !== undefined ? options.allowMaximize : false,
     allowFullscreen: true,
-    allowWindowSideBar: options.allowWindowSideBar !== undefined ? options.allowWindowSideBar : false,
+    allowWindowSideBar:
+      options.allowWindowSideBar !== undefined
+        ? options.allowWindowSideBar
+        : false,
     sideBarPanel: options.sideBarPanel || null,
     // Layout-Position (wird von Mirador Mosaic verwendet)
     layoutOrder: options.layoutOrder,
@@ -62,23 +66,27 @@ class WindowManager {
   private windowConfigs: WindowConfig[] = [];
   private windowMapping: WindowMapping = {}; // voiceName -> windowId
 
-  constructor(voiceData: VoiceData, manifestId: string, options: WindowManagerOptions = {}) {
+  constructor(
+    voiceData: VoiceData,
+    manifestId: string,
+    options: WindowManagerOptions = {},
+  ) {
     if (!voiceData) {
-      throw new Error('WindowManager: voiceData ist erforderlich');
+      throw new Error("WindowManager: voiceData ist erforderlich");
     }
     if (!manifestId) {
-      throw new Error('WindowManager: manifestId ist erforderlich');
+      throw new Error("WindowManager: manifestId ist erforderlich");
     }
 
     this.voiceData = voiceData;
     this.manifestId = manifestId;
     this.options = {
-      windowIdPrefix: 'voice-window',
-      thumbnailNavigationPosition: 'off',
+      windowIdPrefix: "voice-window",
+      thumbnailNavigationPosition: "off",
       allowClose: false,
       allowMaximize: false,
       allowWindowSideBar: false,
-      view: 'single',
+      view: "single",
       ...options,
     };
   }
@@ -88,31 +96,34 @@ class WindowManager {
    * @param {number} startPageIndex - Initiale Seite (0-basiert)
    * @returns {WindowConfig[]} - Array von Window-Konfigurationen
    */
-  public createWindows(startPageIndex: number = 0): WindowConfig[] {
+  public createWindows(startPageIndex = 0): WindowConfig[] {
     const { voices, voiceMapping } = this.voiceData;
 
-    this.windowConfigs = voices.map((voiceName) => {
-      const canvases = voiceMapping[voiceName];
-      if (!canvases || canvases.length === 0) {
-        return null;
-      }
+    this.windowConfigs = voices
+      .map((voiceName) => {
+        const canvases = voiceMapping[voiceName];
+        if (!canvases || canvases.length === 0) {
+          return null;
+        }
 
-      // Initiale Canvas (erste Seite oder startPageIndex)
-      const initialCanvas = canvases[Math.min(startPageIndex, canvases.length - 1)];
+        // Initiale Canvas (erste Seite oder startPageIndex)
+        const initialCanvas =
+          canvases[Math.min(startPageIndex, canvases.length - 1)];
 
-      // Window-Config erstellen
-      const config = createWindowConfig(
-        this.manifestId,
-        initialCanvas,
-        voiceName,
-        {},
-        this.options
-      );
+        // Window-Config erstellen
+        const config = createWindowConfig(
+          this.manifestId,
+          initialCanvas,
+          voiceName,
+          {},
+          this.options,
+        );
 
-      // Mapping speichern
-      this.windowMapping[voiceName] = config.id;
-      return config;
-    }).filter((c): c is WindowConfig => c !== null);
+        // Mapping speichern
+        this.windowMapping[voiceName] = config.id;
+        return config;
+      })
+      .filter((c): c is WindowConfig => c !== null);
 
     return this.windowConfigs;
   }
@@ -122,23 +133,30 @@ class WindowManager {
    * @param {DispatchFunction} dispatch - Redux dispatch Funktion
    * @returns {Promise<void>}
    */
-  public async addWindowsToMirador(dispatch: DispatchFunction, existingWindowIds: string[] = []): Promise<void> {
+  public async addWindowsToMirador(
+    dispatch: DispatchFunction,
+    existingWindowIds: string[] = [],
+  ): Promise<void> {
     if (this.windowConfigs.length === 0) return;
 
     for (const config of this.windowConfigs) {
       // Nicht nochmal hinzufügen wenn bereits vorhanden
       if (existingWindowIds.includes(config.id)) {
-        console.warn(`WindowManager: Window ${config.id} existiert bereits, überspringe.`);
+        console.warn(
+          `WindowManager: Window ${config.id} existiert bereits, überspringe.`,
+        );
         continue;
       }
       const cleanConfig = { ...config, companionWindows: [] };
-      dispatch({ type: 'mirador/ADD_WINDOW', window: cleanConfig });
+      dispatch({ type: "mirador/ADD_WINDOW", window: cleanConfig });
     }
 
     if (this.windowConfigs.length >= 2) {
-      const layout = this._buildMosaicLayout(this.windowConfigs.map(c => c.id));
+      const layout = this._buildMosaicLayout(
+        this.windowConfigs.map((c) => c.id),
+      );
       if (layout) {
-        dispatch({ type: 'mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT', layout });
+        dispatch({ type: "mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT", layout });
       }
     }
   }
@@ -153,7 +171,7 @@ class WindowManager {
     if (!ids || ids.length === 0) return null;
     if (ids.length === 1) return ids[0];
 
-    const container = document.querySelector('.mirador-workspace-viewport');
+    const container = document.querySelector(".mirador-workspace-viewport");
     if (!container) return ids[0];
 
     const W = container.clientWidth;
@@ -170,15 +188,13 @@ class WindowManager {
     // 🎯 --- FORMEL + DISKRETE OPTIMIERUNG ---
     const r0 = Math.sqrt(n * (Vscan / Vviewport));
 
-    const candidates = [
-      Math.floor(r0),
-      Math.round(r0),
-      Math.ceil(r0),
-    ].filter(r => r >= 1 && r <= n);
+    const candidates = [Math.floor(r0), Math.round(r0), Math.ceil(r0)].filter(
+      (r) => r >= 1 && r <= n,
+    );
 
     let best: { rows: number; cols: number; error: number } | null = null;
 
-    candidates.forEach(r => {
+    candidates.forEach((r) => {
       const rows = Math.max(1, r);
       const cols = Math.ceil(n / rows);
 
@@ -196,14 +212,17 @@ class WindowManager {
     // 2. Fenster in Reihen einsortieren
     const rowsArr: string[][] = [];
     for (let r = 0; r < rows; r++) {
-      let slice = ids.slice(r * cols, (r + 1) * cols);
+      const slice = ids.slice(r * cols, (r + 1) * cols);
       if (slice.length > 0) {
         rowsArr.push(slice);
       }
     }
 
     // 3. Hilfsfunktion zum Erzeugen eines Row- oder Column-Binary-Tree
-    function buildAxisTree(items: any[], direction: 'row' | 'column'): MosaicNode {
+    function buildAxisTree(
+      items: any[],
+      direction: "row" | "column",
+    ): MosaicNode {
       if (!items || items.length === 0) return "";
       if (items.length === 1) return items[0];
 
@@ -249,7 +268,11 @@ class WindowManager {
    * @param {DispatchFunction} dispatch - Redux dispatch Funktion
    * @returns {string|null} - Die erstellte Window-ID oder null
    */
-  public addVoiceWindow(voiceName: string, pageIndex: number, dispatch: DispatchFunction): string | null {
+  public addVoiceWindow(
+    voiceName: string,
+    pageIndex: number,
+    dispatch: DispatchFunction,
+  ): string | null {
     if (this.windowMapping[voiceName]) return this.windowMapping[voiceName];
 
     const canvases = this.voiceData.voiceMapping[voiceName];
@@ -261,18 +284,21 @@ class WindowManager {
       initialCanvas,
       voiceName,
       {},
-      this.options
+      this.options,
     );
 
     this.windowConfigs.push(config);
     // Sortieren nach der ursprünglichen Reihenfolge in voiceData.voices
     this.windowConfigs.sort((a, b) => {
-      return this.voiceData.voices.indexOf(a.voiceName) - this.voiceData.voices.indexOf(b.voiceName);
+      return (
+        this.voiceData.voices.indexOf(a.voiceName) -
+        this.voiceData.voices.indexOf(b.voiceName)
+      );
     });
 
     this.windowMapping[voiceName] = config.id;
 
-    dispatch({ type: 'mirador/ADD_WINDOW', window: config });
+    dispatch({ type: "mirador/ADD_WINDOW", window: config });
     return config.id;
   }
 
@@ -281,13 +307,18 @@ class WindowManager {
    * @param {string} voiceName - Name der Stimme
    * @param {DispatchFunction} dispatch - Redux dispatch Funktion
    */
-  public removeVoiceWindow(voiceName: string, dispatch: DispatchFunction): void {
+  public removeVoiceWindow(
+    voiceName: string,
+    dispatch: DispatchFunction,
+  ): void {
     const windowId = this.windowMapping[voiceName];
     if (!windowId) return;
 
-    dispatch({ type: 'mirador/REMOVE_WINDOW', windowId });
+    dispatch({ type: "mirador/REMOVE_WINDOW", windowId });
 
-    this.windowConfigs = this.windowConfigs.filter(c => c.voiceName !== voiceName);
+    this.windowConfigs = this.windowConfigs.filter(
+      (c) => c.voiceName !== voiceName,
+    );
     delete this.windowMapping[voiceName];
   }
 
@@ -298,7 +329,7 @@ class WindowManager {
   public removeAllWindows(dispatch: DispatchFunction): void {
     this.windowConfigs.forEach((config) => {
       dispatch({
-        type: 'mirador/REMOVE_WINDOW',
+        type: "mirador/REMOVE_WINDOW",
         windowId: config.id,
       });
     });
@@ -312,7 +343,7 @@ class WindowManager {
    * @returns {WindowMapping}
    */
   public getWindowMapping(): WindowMapping {
-      console.log("WindowsMangager.getWindowMapping", this.windowMapping)
+    console.log("WindowsMangager.getWindowMapping", this.windowMapping);
     return { ...this.windowMapping };
   }
 
@@ -369,7 +400,7 @@ export const setupSynchronizedWindows = async (
   voiceData: VoiceData,
   manifestId: string,
   dispatch: DispatchFunction,
-  options: WindowManagerOptions = {}
+  options: WindowManagerOptions = {},
 ): Promise<WindowManager> => {
   const manager = new WindowManager(voiceData, manifestId, options);
   manager.createWindows(0);

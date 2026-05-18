@@ -4,21 +4,23 @@
  */
 
 import {
+  CanvasesForPage,
   IIIFManifest,
   LanguageMap,
   VoiceData,
   VoiceMapping,
   VoiceMetadataMap,
   WorkMetadataMap,
-  CanvasesForPage,
-} from '../types';
+} from "../types";
 
 /**
  * Extrahiert ein Label aus IIIF v3 LanguageMap
  */
-function extractLabel(label: LanguageMap | string | undefined | null): string | null {
+function extractLabel(
+  label: LanguageMap | string | undefined | null,
+): string | null {
   if (!label) return null;
-  if (typeof label === 'string') return label;
+  if (typeof label === "string") return label;
 
   if (label.none && Array.isArray(label.none) && label.none.length > 0) {
     return label.none[0];
@@ -47,8 +49,14 @@ function extractLabel(label: LanguageMap | string | undefined | null): string | 
  * - Range.items enthält nur die erste CanvasId der Stimme
  * - Ende der Stimme = nächster Stimmen-Range oder Ende des Buches
  */
-export const detectSynchronizedVoices = (manifest: IIIFManifest): VoiceData | null => {
-  if (!manifest || !Array.isArray(manifest.structures) || manifest.structures.length === 0) {
+export const detectSynchronizedVoices = (
+  manifest: IIIFManifest,
+): VoiceData | null => {
+  if (
+    !manifest ||
+    !Array.isArray(manifest.structures) ||
+    manifest.structures.length === 0
+  ) {
     console.warn("VoiceDetector: Manifest hat keine structures");
     return null;
   }
@@ -81,8 +89,18 @@ export const detectSynchronizedVoices = (manifest: IIIFManifest): VoiceData | nu
 
   // Sortieren nach ID (bei dir entspricht das der Buchreihenfolge) canvases
   voiceRanges.sort((a, b) => {
-    const aId = (a.items && a.items.length > 0) ? (typeof a.items[0] === 'string' ? a.items[0] : a.items[0].id) : null;
-    const bId = (b.items && b.items.length > 0) ? (typeof b.items[0] === 'string' ? b.items[0] : b.items[0].id) : null;
+    const aId =
+      a.items && a.items.length > 0
+        ? typeof a.items[0] === "string"
+          ? a.items[0]
+          : a.items[0].id
+        : null;
+    const bId =
+      b.items && b.items.length > 0
+        ? typeof b.items[0] === "string"
+          ? b.items[0]
+          : b.items[0].id
+        : null;
     return canvasIds.indexOf(aId) - canvasIds.indexOf(bId);
   });
 
@@ -98,16 +116,19 @@ export const detectSynchronizedVoices = (manifest: IIIFManifest): VoiceData | nu
     const voiceName = fullLabel.replace("Stimme:", "").trim();
 
     // Startcanvas = erstes Canvas in range.items
-    const startCanvasItem = range.items && range.items.length
-      ? range.items[0]
-      : null;
+    const startCanvasItem = range.items?.length ? range.items[0] : null;
 
     if (!startCanvasItem) {
-      console.warn(`VoiceDetector: Stimme "${voiceName}" hat kein start Canvas`);
+      console.warn(
+        `VoiceDetector: Stimme "${voiceName}" hat kein start Canvas`,
+      );
       continue;
     }
 
-    const startCanvasId = typeof startCanvasItem === 'string' ? startCanvasItem : startCanvasItem.id;
+    const startCanvasId =
+      typeof startCanvasItem === "string"
+        ? startCanvasItem
+        : startCanvasItem.id;
     const startIndex = canvasIds.indexOf(startCanvasId);
     if (startIndex < 0) {
       continue;
@@ -119,7 +140,8 @@ export const detectSynchronizedVoices = (manifest: IIIFManifest): VoiceData | nu
       const nextRange = voiceRanges[i + 1];
       const nextItem = nextRange.items?.[0];
       if (nextItem) {
-        nextStartCanvasId = typeof nextItem === 'string' ? nextItem : nextItem.id;
+        nextStartCanvasId =
+          typeof nextItem === "string" ? nextItem : nextItem.id;
       }
     }
 
@@ -144,7 +166,7 @@ export const detectSynchronizedVoices = (manifest: IIIFManifest): VoiceData | nu
   const tocCanvasIds = new Set<string>();
 
   // Suche in Items (Canvas Labels)
-  allCanvas.forEach(canvas => {
+  allCanvas.forEach((canvas) => {
     const label = extractLabel(canvas.label);
     if (label && label.includes("Inhaltsverz.")) {
       tocCanvasIds.add(canvas.id);
@@ -152,12 +174,13 @@ export const detectSynchronizedVoices = (manifest: IIIFManifest): VoiceData | nu
   });
 
   // Suche in Structures (Range Labels)
-  (firstStructure.items as any[]).forEach(range => {
+  (firstStructure.items as any[]).forEach((range) => {
     const label = extractLabel(range.label);
     if (label && label.includes("Inhaltsverz.")) {
       if (range.items && range.items.length > 0) {
         const firstItem = range.items[0];
-        const canvasId = typeof firstItem === 'string' ? firstItem : firstItem.id;
+        const canvasId =
+          typeof firstItem === "string" ? firstItem : firstItem.id;
         if (canvasId) {
           tocCanvasIds.add(canvasId);
         }
@@ -166,7 +189,7 @@ export const detectSynchronizedVoices = (manifest: IIIFManifest): VoiceData | nu
   });
 
   // TOC Offsets den Stimmen zuordnen
-  Object.keys(voiceMapping).forEach(voiceName => {
+  Object.keys(voiceMapping).forEach((voiceName) => {
     const voiceCanvases = voiceMapping[voiceName];
     for (let i = 0; i < voiceCanvases.length; i++) {
       if (tocCanvasIds.has(voiceCanvases[i])) {
@@ -180,7 +203,12 @@ export const detectSynchronizedVoices = (manifest: IIIFManifest): VoiceData | nu
   if (voices.length === 0) return null;
 
   const pageCounts = Object.values(voiceMapping).map((x) => x.length);
-  const works = detectWorksPerVoice(manifest, voiceMetadata, voices, voiceMapping);
+  const works = detectWorksPerVoice(
+    manifest,
+    voiceMetadata,
+    voices,
+    voiceMapping,
+  );
 
   return {
     manifest,
@@ -193,7 +221,6 @@ export const detectSynchronizedVoices = (manifest: IIIFManifest): VoiceData | nu
     hasVariableLength: Math.max(...pageCounts) !== Math.min(...pageCounts),
   };
 };
-
 
 /**
  * Erkennt Werke im Manifest und berechnet Offsets pro Stimme.
@@ -208,9 +235,13 @@ export function detectWorksPerVoice(
   manifest: IIIFManifest,
   _voiceMetadata: VoiceMetadataMap,
   voices: string[],
-  voiceMapping: VoiceMapping
+  voiceMapping: VoiceMapping,
 ): WorkMetadataMap {
-  if (!manifest.structures || !Array.isArray(manifest.structures) || manifest.structures.length === 0) {
+  if (
+    !manifest.structures ||
+    !Array.isArray(manifest.structures) ||
+    manifest.structures.length === 0
+  ) {
     console.warn("detectWorksPerVoice: Keine structures im Manifest");
     return {};
   }
@@ -221,15 +252,18 @@ export function detectWorksPerVoice(
 
   (firstStructure.items as any[]).forEach((range) => {
     const rawLabel = extractLabel(range.label);
-    if (!rawLabel || !rawLabel.startsWith("[Werk")) return;
+    if (!rawLabel?.startsWith("[Werk")) return;
 
     // ------------------------------------------------------
     // 1. Werknummer extrahieren
     //    Beispiel: "[Werk 2:]" → 2
     // ------------------------------------------------------
-    const match = rawLabel.match(/\[Werk\s+(\d+)\s*:/i);
+    const match = /\[Werk\s+(\d+)\s*:/i.exec(rawLabel);
     if (!match) {
-      console.warn("detectWorks: Konnte Werknummer nicht extrahieren:", rawLabel);
+      console.warn(
+        "detectWorks: Konnte Werknummer nicht extrahieren:",
+        rawLabel,
+      );
       return;
     }
 
@@ -240,7 +274,7 @@ export function detectWorksPerVoice(
       works[werkId] = {
         werkId,
         label: rawLabel,
-        occurrences: {},   // voiceName → { offset, rangeIndex }
+        occurrences: {}, // voiceName → { offset, rangeIndex }
       };
     }
 
@@ -257,19 +291,20 @@ export function detectWorksPerVoice(
 
     for (const voiceName of voices) {
       const voiceCanvases = voiceMapping[voiceName];
-      const firstItem = range.items && range.items.length > 0 ? range.items[0] : null;
+      const firstItem =
+        range.items && range.items.length > 0 ? range.items[0] : null;
       if (!firstItem) continue;
 
-      const firstItemId = typeof firstItem === 'string' ? firstItem : firstItem.id;
+      const firstItemId =
+        typeof firstItem === "string" ? firstItem : firstItem.id;
       const offset = voiceCanvases.indexOf(firstItemId);
-      if (offset >= 0){
+      if (offset >= 0) {
         works[werkId].occurrences[voiceName] = {
-                 offset,
-                 rangeIndex: 0
-               };
+          offset,
+          rangeIndex: 0,
+        };
       }
     }
-
   });
 
   return works;
@@ -291,8 +326,12 @@ export const hasSynchronizedVoices = (manifest: IIIFManifest): boolean => {
  * @param {number} pageIndex - Seiten-Index (0-basiert)
  * @returns {string|null} Canvas-ID oder null
  */
-export const getCanvasForVoiceAndPage = (voiceData: VoiceData, voiceName: string, pageIndex: number): string | null => {
-  if (!voiceData || !voiceData.voiceMapping) {
+export const getCanvasForVoiceAndPage = (
+  voiceData: VoiceData,
+  voiceName: string,
+  pageIndex: number,
+): string | null => {
+  if (!voiceData?.voiceMapping) {
     return null;
   }
 
@@ -310,8 +349,11 @@ export const getCanvasForVoiceAndPage = (voiceData: VoiceData, voiceName: string
  * @param {number} pageIndex - Seiten-Index (0-basiert)
  * @returns {CanvasesForPage} - Map von Stimme zu Canvas-ID
  */
-export const getCanvasesForPage = (voiceData: VoiceData, pageIndex: number): CanvasesForPage => {
-  if (!voiceData || !voiceData.voiceMapping) {
+export const getCanvasesForPage = (
+  voiceData: VoiceData,
+  pageIndex: number,
+): CanvasesForPage => {
+  if (!voiceData?.voiceMapping) {
     return {};
   }
 
@@ -330,8 +372,10 @@ export const getCanvasesForPage = (voiceData: VoiceData, pageIndex: number): Can
  * @param {VoiceData} voiceData - Ergebnis von detectSynchronizedVoices()
  * @returns {CanvasesForPage} - Map von Stimme zu Canvas-ID
  */
-export const getCanvasesForCurrentPosition = (voiceData: VoiceData): CanvasesForPage => {
-  if (!voiceData || !voiceData.voiceMapping) {
+export const getCanvasesForCurrentPosition = (
+  voiceData: VoiceData,
+): CanvasesForPage => {
+  if (!voiceData?.voiceMapping) {
     return {};
   }
 
@@ -352,10 +396,13 @@ export const getCanvasesForCurrentPosition = (voiceData: VoiceData): CanvasesFor
  * @param {number} requiredPages - Benötigte Seitenanzahl
  * @returns {boolean}
  */
-export const validatePageCount = (voiceData: VoiceData, requiredPages: number): boolean => {
-  if (!voiceData || !voiceData.minPages) {
+export const validatePageCount = (
+  voiceData: VoiceData,
+  requiredPages: number,
+): boolean => {
+  if (!voiceData?.minPages) {
     return false;
   }
-  
+
   return voiceData.minPages >= requiredPages;
 };

@@ -4,24 +4,23 @@
  */
 
 import {
-  IIIFManifest,
-  VoiceData,
-  WindowMapping,
-  PageChangeListener,
   CanvasesForPage,
   DebugInfo,
   DispatchFunction,
+  IIIFManifest,
   ISyncController,
+  PageChangeListener,
+  VoiceData,
   VoiceMetadata,
-} from '../types';
-import {
-  getCanvasesForCurrentPosition,
-} from "./VoiceDetector";
+  WindowMapping,
+} from "../types";
+import { getCanvasesForCurrentPosition } from "./VoiceDetector";
 
 const reverseMapping = (o: Record<string, string>): Record<string, string[]> =>
   Object.keys(o).reduce(
-    (r: Record<string, string[]>, k: string) => Object.assign(r, { [o[k]]: (r[o[k]] || []).concat(k) }),
-    {}
+    (r: Record<string, string[]>, k: string) =>
+      Object.assign(r, { [o[k]]: (r[o[k]] || []).concat(k) }),
+    {},
   );
 
 /**
@@ -33,10 +32,14 @@ class SyncController implements ISyncController {
   public voiceData: VoiceData;
   public windowMapping: WindowMapping; // Map von Stimme zu Mirador Window-ID
   public windowIdToVoiceMapping: Record<string, string[]> = {}; // map von Windows Id nach voice
-  public syncEnabled: boolean = true;
+  public syncEnabled = true;
   private listeners: PageChangeListener[] = [];
 
-  constructor(manifest: IIIFManifest, voiceData: VoiceData, windowMapping: WindowMapping = {}) {
+  constructor(
+    manifest: IIIFManifest,
+    voiceData: VoiceData,
+    windowMapping: WindowMapping = {},
+  ) {
     if (!voiceData) {
       throw new Error("SyncController: voiceData ist erforderlich");
     }
@@ -78,7 +81,7 @@ class SyncController implements ISyncController {
     const voiceNames = this.windowIdToVoiceMapping[windowId];
     if (!voiceNames) return;
 
-    voiceNames.forEach(voiceName => {
+    voiceNames.forEach((voiceName) => {
       const canvases = this.voiceData.voiceMapping[voiceName];
       const meta = this.voiceData.voiceMetadata[voiceName];
       if (canvases && meta) {
@@ -96,10 +99,11 @@ class SyncController implements ISyncController {
   private notifyListeners(): void {
     // We assume the first voice's position for global page index
     const firstVoice = this.voiceData.voices[0];
-    const pageIndex = this.voiceData.voiceMetadata[firstVoice]?.currentPosition || 0;
+    const pageIndex =
+      this.voiceData.voiceMetadata[firstVoice]?.currentPosition || 0;
     const currentCanvases = this.getCurrentCanvases();
 
-    this.listeners.forEach(listener => listener(pageIndex, currentCanvases));
+    this.listeners.forEach((listener) => listener(pageIndex, currentCanvases));
   }
 
   /**
@@ -126,7 +130,7 @@ class SyncController implements ISyncController {
   public navigateToTOC(dispatch: DispatchFunction): boolean {
     Object.keys(this.voiceData.voiceMetadata).forEach((voiceName) => {
       const meta = this.voiceData.voiceMetadata[voiceName];
-      if (meta && meta.tocOffset !== undefined) {
+      if (meta?.tocOffset !== undefined) {
         meta.currentPosition = Math.min(meta.tocOffset, meta.pageCount - 1);
       }
     });
@@ -149,7 +153,7 @@ class SyncController implements ISyncController {
       // Nur verringern, wenn wir nicht am Anfang der Stimme sind
       if (meta.currentPosition > 0) {
         meta.currentPosition -= 1;
-      } 
+      }
     });
 
     if (this.syncEnabled) {
@@ -178,7 +182,10 @@ class SyncController implements ISyncController {
    * @param {DispatchFunction} dispatch - Redux dispatch Funktion
    * @returns {boolean} - true wenn Navigation erfolgreich
    */
-  public navigateToPage(pageIndex: number, dispatch: DispatchFunction): boolean {
+  public navigateToPage(
+    pageIndex: number,
+    dispatch: DispatchFunction,
+  ): boolean {
     if (pageIndex < 0 || pageIndex >= this.voiceData.minPages) {
       console.warn(`SyncController: Ungültiger Seitenindex: ${pageIndex}`);
       return false;
@@ -200,7 +207,7 @@ class SyncController implements ISyncController {
     const work = this.voiceData.workMetadata[workId];
     if (!work) {
       return false;
-    } 
+    }
 
     Object.keys(this.voiceData.voiceMetadata).forEach((voiceName) => {
       const meta = this.voiceData.voiceMetadata[voiceName];
@@ -230,7 +237,7 @@ class SyncController implements ISyncController {
 
       if (!windowId) {
         console.warn(
-          `SyncController: Kein Window für Stimme "${voiceName}" gefunden`
+          `SyncController: Kein Window für Stimme "${voiceName}" gefunden`,
         );
         return;
       }
@@ -312,7 +319,8 @@ class SyncController implements ISyncController {
    */
   public getDebugInfo(): DebugInfo {
     const firstVoice = this.voiceData.voices[0];
-    const currentPageNumber = (this.voiceData.voiceMetadata[firstVoice]?.currentPosition || 0) + 1;
+    const currentPageNumber =
+      (this.voiceData.voiceMetadata[firstVoice]?.currentPosition || 0) + 1;
 
     return {
       currentPageNumber,

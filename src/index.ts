@@ -1,19 +1,19 @@
-import { useEffect } from 'react';
-import Mirador from 'mirador';
+import Mirador from "mirador";
+import { useEffect } from "react";
 
-import SyncNavigationUI from './components/SyncNavigationUI';
-import WindowVoiceInfo from './components/WindowVoiceInfo';
-import { OSDReferences, pluginSaga } from './sagas';
+import SyncNavigationUI from "./components/SyncNavigationUI";
+import WindowVoiceInfo from "./components/WindowVoiceInfo";
+import { OSDReferences, pluginSaga } from "./sagas";
 import {
   ISyncController,
   PluginAction,
   SynchronizedVoicesState,
-} from './types';
+} from "./types";
 
 const SynchronizedVoicesPlugin = {
-  target: 'WorkspaceControlPanelButtons',
-  mode: 'add',
-  name: 'SynchronizedVoicesPlugin',
+  target: "WorkspaceControlPanelButtons",
+  mode: "add",
+  name: "SynchronizedVoicesPlugin",
   saga: pluginSaga,
   component: SyncNavigationUI,
   mapStateToProps: (state: any) => ({
@@ -29,27 +29,29 @@ const SynchronizedVoicesPlugin = {
     updateViewport: (windowId: string, payload: any) =>
       dispatch(Mirador.actions.updateViewport(windowId, payload)),
 
-    addWindow: (window: any) =>
-      dispatch(Mirador.actions.addWindow(window)),
+    addWindow: (window: any) => dispatch(Mirador.actions.addWindow(window)),
 
     updateWorkspaceMosaicLayout: (layout: any) =>
       dispatch(Mirador.actions.updateWorkspaceMosaicLayout(layout)),
 
     removeWindow: (windowId: string) =>
-      dispatch({ type: 'mirador/REMOVE_WINDOW', windowId }),
+      dispatch({ type: "mirador/REMOVE_WINDOW", windowId }),
 
     updateWindow: (windowId: string, payload: any) =>
-      dispatch({ type: 'mirador/UPDATE_WINDOW', windowId, payload }),
+      dispatch({ type: "mirador/UPDATE_WINDOW", windowId, payload }),
 
     initController: (controller: ISyncController) =>
-      dispatch({ type: 'sync/initController', controller }),
+      dispatch({ type: "sync/initController", controller }),
   }),
   reducers: {
-    synchronizedVoices: (state: SynchronizedVoicesState = {}, action: PluginAction) => {
+    synchronizedVoices: (
+      state: SynchronizedVoicesState = {},
+      action: PluginAction,
+    ) => {
       switch (action.type) {
-        case 'SET_SYNC_MODE':
+        case "SET_SYNC_MODE":
           return { ...state, syncEnabled: (action as any).enabled };
-        case 'SET_VOICE_MAPPING':
+        case "SET_VOICE_MAPPING":
           return { ...state, voiceMapping: (action as any).mapping };
         case "sync/initController":
           return {
@@ -64,8 +66,8 @@ const SynchronizedVoicesPlugin = {
 };
 
 const WindowVoiceInfoPlugin = {
-  target: 'WindowTopBarPluginArea',
-  mode: 'wrap',
+  target: "WindowTopBarPluginArea",
+  mode: "wrap",
   component: WindowVoiceInfo,
   mapStateToProps: (state: any, { windowId }: { windowId: string }) => {
     const window = state.windows[windowId];
@@ -78,7 +80,13 @@ const WindowVoiceInfoPlugin = {
   },
 };
 
-const OpenSeadragonViewerPluginComponent = ({ windowId, viewer }: { windowId: string, viewer: any }) => {
+const OpenSeadragonViewerPluginComponent = ({
+  windowId,
+  viewer,
+}: {
+  windowId: string;
+  viewer: any;
+}) => {
   useEffect(() => {
     if (viewer) {
       OSDReferences.set(windowId, viewer);
@@ -91,8 +99,8 @@ const OpenSeadragonViewerPluginComponent = ({ windowId, viewer }: { windowId: st
 };
 
 const OpenSeadragonViewerPlugin = {
-  target: 'OpenSeadragonViewer',
-  mode: 'add',
+  target: "OpenSeadragonViewer",
+  mode: "add",
   component: OpenSeadragonViewerPluginComponent,
   mapStateToProps: (_state: any, { windowId }: { windowId: string }) => ({
     windowId,
