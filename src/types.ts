@@ -7,9 +7,9 @@
  * IIIF Manifest Types (vereinfacht)
  */
 export interface IIIFManifest {
-  '@context': string;
+  "@context": string;
   id: string;
-  type: 'Manifest';
+  type: "Manifest";
   label?: LanguageMap;
   metadata?: Metadata[];
   items: IIIFCanvas[];
@@ -18,7 +18,7 @@ export interface IIIFManifest {
 
 export interface IIIFCanvas {
   id: string;
-  type: 'Canvas';
+  type: "Canvas";
   label?: LanguageMap;
   width: number;
   height: number;
@@ -27,16 +27,14 @@ export interface IIIFCanvas {
 
 export interface IIIFRange {
   id: string;
-  type: 'Range';
+  type: "Range";
   label?: LanguageMap;
   items?: (string | { id: string; type: string } | IIIFRange)[];
   behavior?: string[];
   metadata?: Metadata[];
 }
 
-export interface LanguageMap {
-  [language: string]: string[];
-}
+export type LanguageMap = Record<string, string[]>;
 
 export interface Metadata {
   label: LanguageMap;
@@ -57,13 +55,9 @@ export interface VoiceData {
   hasVariableLength: boolean;
 }
 
-export interface VoiceMapping {
-  [voiceName: string]: string[]; // Canvas-IDs
-}
+export type VoiceMapping = Record<string, string[]>;
 
-export interface VoiceMetadataMap {
-  [voiceName: string]: VoiceMetadata;
-}
+export type VoiceMetadataMap = Record<string, VoiceMetadata>;
 
 export interface VoiceMetadata {
   rangeId: string;
@@ -75,9 +69,7 @@ export interface VoiceMetadata {
   tocOffset?: number;
 }
 
-export interface WorkMetadataMap {
-  [werkId: number]: WorkMetadata;
-}
+export type WorkMetadataMap = Record<number, WorkMetadata>;
 
 export interface WorkMetadata {
   werkId: number;
@@ -85,12 +77,13 @@ export interface WorkMetadata {
   occurrences: WorkOccurrences;
 }
 
-export interface WorkOccurrences {
-  [voiceName: string]: {
+export type WorkOccurrences = Record<
+  string,
+  {
     offset: number;
     rangeIndex?: number;
-  };
-}
+  }
+>;
 
 /**
  * WindowManager Types
@@ -127,9 +120,7 @@ export interface WindowManagerOptions {
   sideBarPanel?: string | null;
 }
 
-export interface WindowMapping {
-  [voiceName: string]: string; // windowId
-}
+export type WindowMapping = Record<string, string>;
 
 export interface LayoutInfo {
   rows: number;
@@ -139,19 +130,20 @@ export interface LayoutInfo {
   windowCount: number;
 }
 
-export type MosaicNode = {
-  direction: 'row' | 'column';
-  splitPercentage?: number;
-  first: MosaicNode | string;
-  second: MosaicNode | string;
-} | string | null;
+export type MosaicNode =
+  | {
+      direction: "row" | "column";
+      splitPercentage?: number;
+      first: MosaicNode | string;
+      second: MosaicNode | string;
+    }
+  | string
+  | null;
 
 /**
  * SyncController Types
  */
-export interface CanvasMap {
-  [canvasId: string]: IIIFCanvas;
-}
+export type CanvasMap = Record<string, IIIFCanvas>;
 
 export interface ViewportPayload {
   x?: number;
@@ -159,11 +151,12 @@ export interface ViewportPayload {
   zoom?: number;
 }
 
-export type PageChangeListener = (pageIndex: number, canvases: CanvasesForPage) => void;
+export type PageChangeListener = (
+  pageIndex: number,
+  canvases: CanvasesForPage,
+) => void;
 
-export interface CanvasesForPage {
-  [voiceName: string]: string; // canvasId
-}
+export type CanvasesForPage = Record<string, string>;
 
 export interface DebugInfo {
   currentPageNumber?: number;
@@ -211,51 +204,51 @@ export interface ISyncController {
  * Redux Action Types
  */
 export interface SetCanvasAction {
-  type: 'mirador/SET_CANVAS';
+  type: "mirador/SET_CANVAS";
   windowId: string;
   canvasId: string;
 }
 
 export interface AddWindowAction {
-  type: 'mirador/ADD_WINDOW';
+  type: "mirador/ADD_WINDOW";
   window: WindowConfig;
 }
 
 export interface RemoveWindowAction {
-  type: 'mirador/REMOVE_WINDOW';
+  type: "mirador/REMOVE_WINDOW";
   windowId: string;
 }
 
 export interface UpdateWindowAction {
-  type: 'mirador/UPDATE_WINDOW';
+  type: "mirador/UPDATE_WINDOW";
   windowId: string;
   payload: Partial<WindowConfig>;
 }
 
 export interface UpdateViewportAction {
-  type: 'mirador/UPDATE_VIEWPORT';
+  type: "mirador/UPDATE_VIEWPORT";
   windowId: string;
   payload: ViewportPayload;
 }
 
 export interface UpdateWorkspaceMosaicLayoutAction {
-  type: 'mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT';
+  type: "mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT";
   layout: MosaicNode;
 }
 
 export interface InitControllerAction {
-  type: 'sync/initController';
+  type: "sync/initController";
   controller: ISyncController;
 }
 
 export interface AddVoiceWindowsAction {
-  type: 'sync/ADD_VOICE_WINDOWS';
+  type: "sync/ADD_VOICE_WINDOWS";
   windows: WindowConfig[];
   manifestId: string;
 }
 
 export interface VoiceWindowsReadyAction {
-  type: 'sync/VOICE_WINDOWS_READY';
+  type: "sync/VOICE_WINDOWS_READY";
   windowIds: string[];
 }
 
@@ -269,8 +262,8 @@ export type PluginAction =
   | InitControllerAction
   | AddVoiceWindowsAction
   | VoiceWindowsReadyAction
-  | { type: 'SET_SYNC_MODE'; enabled: boolean }
-  | { type: 'SET_VOICE_MAPPING'; mapping: WindowMapping };
+  | { type: "SET_SYNC_MODE"; enabled: boolean }
+  | { type: "SET_VOICE_MAPPING"; mapping: WindowMapping };
 
 /**
  * Redux State Types
@@ -297,8 +290,8 @@ export interface SynchronizedVoicesState {
 }
 
 export interface PluginState {
-  windows: { [windowId: string]: MiradorWindow };
-  manifests: { [manifestId: string]: MiradorManifest };
+  windows: Record<string, MiradorWindow>;
+  manifests: Record<string, MiradorManifest>;
   config: any;
   synchronizedVoices: SynchronizedVoicesState;
 }
@@ -307,8 +300,8 @@ export interface PluginState {
  * Component Props Types
  */
 export interface SyncNavigationUIProps {
-  windows: { [windowId: string]: MiradorWindow };
-  manifests: { [manifestId: string]: MiradorManifest };
+  windows: Record<string, MiradorWindow>;
+  manifests: Record<string, MiradorManifest>;
   config: any;
   setCanvas: (windowId: string, canvasId: string) => void;
   updateViewport: (windowId: string, payload: ViewportPayload) => void;

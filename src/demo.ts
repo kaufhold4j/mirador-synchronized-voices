@@ -17,7 +17,8 @@ const config = {
     {
       manifestId:
         "https://api-dev.digitale-sammlungen.de/iiif/presentation/v3/bsb00104653/manifest",
-      provider: ", querformat , 4 stimmen , 193 werke, inhaltsverzeichnisse bei 3 stimmen",
+      provider:
+        ", querformat , 4 stimmen , 193 werke, inhaltsverzeichnisse bei 3 stimmen",
     },
     {
       manifestId:
@@ -34,11 +35,13 @@ const config = {
   window: {
     allowFullscreen: true,
   },
-  windows: [{
-                  manifestId:
-                    "https://api-dev.digitale-sammlungen.de/iiif/presentation/v3/bsb00104653/manifest",
-                  view: "single",
-                },],
+  windows: [
+    {
+      manifestId:
+        "https://api-dev.digitale-sammlungen.de/iiif/presentation/v3/bsb00104653/manifest",
+      view: "single",
+    },
+  ],
 };
 
 Mirador.viewer(config, [...Plugin]);

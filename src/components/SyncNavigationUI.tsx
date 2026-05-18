@@ -1,42 +1,42 @@
-import React, { useState, useEffect, useCallback } from "react";
-
-import { Popover, List, ListItem, ListItemButton, ListItemText, Checkbox, ListItemIcon } from "@mui/material";
-import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
-import RecordVoiceOverIcon from "@mui/icons-material/RecordVoiceOver";
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
-import Switch from "@mui/material/Switch";
-import FormControlLabel from "@mui/material/FormControlLabel";
-
-import {
-  Box,
-  Paper,
-} from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
-
-import { useTheme } from "@mui/material/styles";
-import IconButton from "@mui/material/IconButton";
-import Tooltip from "@mui/material/Tooltip";
-import Stack from "@mui/material/Stack";
-import Divider from "@mui/material/Divider";
+import KeyboardDoubleArrowLeftIcon from "@mui/icons-material/KeyboardDoubleArrowLeft";
+import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
+import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
 import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 import NavigateNextIcon from "@mui/icons-material/NavigateNext";
-import { Typography } from "@mui/material";
-import KeyboardDoubleArrowRightIcon from "@mui/icons-material/KeyboardDoubleArrowRight";
-import KeyboardDoubleArrowLeftIcon from "@mui/icons-material/KeyboardDoubleArrowLeft";
+import RecordVoiceOverIcon from "@mui/icons-material/RecordVoiceOver";
 import TocIcon from "@mui/icons-material/Toc";
-
 import {
-  detectSynchronizedVoices,
-} from "../services/VoiceDetector";
+  Checkbox,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Popover,
+} from "@mui/material";
+import { Box, Paper } from "@mui/material";
+import { Typography } from "@mui/material";
+import Divider from "@mui/material/Divider";
+import FormControlLabel from "@mui/material/FormControlLabel";
+import IconButton from "@mui/material/IconButton";
+import Stack from "@mui/material/Stack";
+import { useTheme } from "@mui/material/styles";
+import Switch from "@mui/material/Switch";
+import Tooltip from "@mui/material/Tooltip";
+import React, { useCallback, useEffect, useState } from "react";
+
 import SyncController from "../services/SyncController";
+import { detectSynchronizedVoices } from "../services/VoiceDetector";
 import WindowManager from "../services/WindowManager";
 import {
+  IIIFManifest,
+  ISyncController,
+  PluginAction,
   SyncNavigationUIProps,
   VoiceData,
   WorkMetadataMap,
-  PluginAction,
-  ISyncController,
-  IIIFManifest
 } from "../types";
 
 /**
@@ -58,17 +58,25 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
   const theme = useTheme();
 
   // State
-  const [syncController, setSyncController] = useState<ISyncController | null>(null);
-  const [windowManager, setWindowManager] = useState<WindowManager | null>(null);
+  const [syncController, setSyncController] = useState<ISyncController | null>(
+    null,
+  );
+  const [windowManager, setWindowManager] = useState<WindowManager | null>(
+    null,
+  );
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [works, setWorks] = useState<WorkMetadataMap>({});
   const [voiceData, setVoiceData] = useState<VoiceData | null>(null);
   const [enabledVoices, setEnabledVoices] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [currentManifestId, setCurrentManifestId] = useState<string | null>(null);
+  const [currentManifestId, setCurrentManifestId] = useState<string | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const [voiceAnchorEl, setVoiceAnchorEl] = useState<HTMLButtonElement | null>(null);
+  const [voiceAnchorEl, setVoiceAnchorEl] = useState<HTMLButtonElement | null>(
+    null,
+  );
   // Neuer State für den View-Mode
   const [isVoiceMode, setIsVoiceMode] = useState<boolean>(false);
   const [originalWindowId, setOriginalWindowId] = useState<string | null>(null);
@@ -90,7 +98,7 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
         case "mirador/ADD_WINDOW":
           if (addWindow) {
             addWindow(action.window);
-          } 
+          }
           break;
         case "mirador/REMOVE_WINDOW":
           if (removeWindow) {
@@ -124,27 +132,35 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
       updateWindow,
       updateWorkspaceMosaicLayout,
       initController,
-    ]
+    ],
   );
 
   /**
    * Initialisierung: Suche nach synchronized-voices Manifest
    */
   useEffect(() => {
-    // Finde erstes Manifest mit synchronized-voices
+    // Liste aller Manifest-IDs, die aktuell in Fenstern geöffnet sind
+    const activeManifestIds = new Set(
+      Object.values(windows || {}).map((w) => w.manifestId),
+    );
+
+    // Finde erstes Manifest mit synchronized-voices unter den aktiven Fenstern
     const manifestEntry = Object.entries(manifests || {}).find(
-      ([, manifestData]) => {
+      ([manifestId, manifestData]) => {
+        // Nur Manifeste prüfen, die auch in einem Fenster offen sind
+        if (!activeManifestIds.has(manifestId)) return false;
+
         const manifest = manifestData?.json;
         if (!manifest) return false;
 
-        const result = detectSynchronizedVoices(manifest as IIIFManifest);
+        const result = detectSynchronizedVoices(manifest);
         return result !== null;
-      }
+      },
     );
 
     if (!manifestEntry) {
       setIsInitialized(false);
-      setError("Kein Stimmbuch-Manifest gefunden");
+      setError(null);
       setCurrentManifestId(null);
       return;
     }
@@ -163,48 +179,48 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
     setWindowManager(null);
     setSyncController(null);
 
-    const manifest = (manifestData?.json || manifestData) as IIIFManifest;
-    const detectedVoiceData = detectSynchronizedVoices(manifest) as VoiceData;
+    const manifest = manifestData?.json || manifestData;
+    const detectedVoiceData = detectSynchronizedVoices(manifest)!;
     setVoiceData(detectedVoiceData);
     setWorks(detectedVoiceData.workMetadata);
     setEnabledVoices(detectedVoiceData.voices);
 
-async function initialize() {
-  try {
-    // 1. Originales Window-ID merken (nicht entfernen!)
-    const originalWindow = Object.values(windows || {}).find((w: any) =>
-      w.manifestId === manifestId && !w.id.startsWith('voice-window')
-    ) as any;
-    if (originalWindow) {
-      setOriginalWindowId(originalWindow.id);
+    async function initialize() {
+      try {
+        // 1. Originales Window-ID merken (nicht entfernen!)
+        const originalWindow = Object.values(windows || {}).find(
+          (w: any) =>
+            w.manifestId === manifestId && !w.id.startsWith("voice-window"),
+        ) as any;
+        if (originalWindow) {
+          setOriginalWindowId(originalWindow.id);
+        }
+
+        // 2. WindowManager erstellen (aber noch keine Windows hinzufügen)
+        const wm = new WindowManager(detectedVoiceData, manifestId, {
+          windowIdPrefix: "voice-window",
+          allowClose: false,
+          allowMaximize: false,
+          allowWindowSideBar: false,
+          thumbnailNavigationPosition: "off",
+        });
+        wm.createWindows(0);
+
+        // 3. SyncController erstellen
+        const sc = new SyncController(manifest, detectedVoiceData);
+        sc.addPageChangeListener((pageIndex) => {
+          setCurrentPage(pageIndex + 1);
+        });
+
+        // 4. State setzen — aber isVoiceMode bleibt false
+        setWindowManager(wm);
+        setSyncController(sc);
+        setCurrentPage(1);
+        setIsInitialized(true);
+      } catch (err: any) {
+        setError(`Initialisierungsfehler: ${err.message}`);
+      }
     }
-
-    // 2. WindowManager erstellen (aber noch keine Windows hinzufügen)
-    const wm = new WindowManager(detectedVoiceData, manifestId, {
-      windowIdPrefix: 'voice-window',
-      allowClose: false,
-      allowMaximize: false,
-      allowWindowSideBar: false,
-      thumbnailNavigationPosition: 'off',
-    });
-    wm.createWindows(0);
-
-    // 3. SyncController erstellen
-    const sc = new SyncController(manifest, detectedVoiceData);
-    sc.addPageChangeListener((pageIndex) => {
-      setCurrentPage(pageIndex + 1);
-    });
-
-    // 4. State setzen — aber isVoiceMode bleibt false
-    setWindowManager(wm);
-    setSyncController(sc);
-    setCurrentPage(1);
-    setIsInitialized(true);
-
-  } catch (err: any) {
-    setError(`Initialisierungsfehler: ${err.message}`);
-  }
-}
 
     initialize();
 
@@ -278,7 +294,7 @@ async function initialize() {
         syncController.navigateToWork(id, dispatch);
       }
     },
-    [syncController, dispatch]
+    [syncController, dispatch],
   );
 
   const handleJumpToTOC = useCallback(() => {
@@ -287,119 +303,130 @@ async function initialize() {
     }
   }, [syncController, dispatch]);
 
-  const handleToggleVoice = useCallback((voiceName: string) => {
+  const handleToggleVoice = useCallback(
+    (voiceName: string) => {
+      if (!windowManager || !syncController) return;
+
+      const isEnabled = enabledVoices.includes(voiceName);
+      const newEnabledVoices = isEnabled
+        ? enabledVoices.filter((v) => v !== voiceName)
+        : [...enabledVoices, voiceName];
+
+      if (newEnabledVoices.length === 0) return; // Mindestens eine Stimme muss aktiv bleiben
+
+      setEnabledVoices(newEnabledVoices);
+
+      if (isEnabled) {
+        windowManager.removeVoiceWindow(voiceName, dispatch);
+      } else {
+        windowManager.addVoiceWindow(voiceName, currentPage - 1, dispatch);
+      }
+
+      // Update SyncController mapping
+      syncController.setWindowMapping(windowManager.getWindowMapping());
+
+      // Update Mosaic layout
+      const windowConfigs = windowManager.getWindowConfigs();
+      const ids = windowConfigs.map((c) => c.id);
+      const layout = windowManager._buildMosaicLayout(ids);
+      if (layout) {
+        dispatch({ type: "mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT", layout });
+      }
+    },
+    [windowManager, syncController, enabledVoices, currentPage, dispatch],
+  );
+
+  const handleToggleViewMode = useCallback(async () => {
     if (!windowManager || !syncController) return;
 
-    const isEnabled = enabledVoices.includes(voiceName);
-    const newEnabledVoices = isEnabled
-      ? enabledVoices.filter(v => v !== voiceName)
-      : [...enabledVoices, voiceName];
+    if (!isVoiceMode) {
+      // ── Normal → Voice ──────────────────────────────────────────
 
-    if (newEnabledVoices.length === 0) return; // Mindestens eine Stimme muss aktiv bleiben
-
-    setEnabledVoices(newEnabledVoices);
-
-    if (isEnabled) {
-      windowManager.removeVoiceWindow(voiceName, dispatch);
-    } else {
-      windowManager.addVoiceWindow(voiceName, currentPage - 1, dispatch);
-    }
-
-    // Update SyncController mapping
-    syncController.setWindowMapping(windowManager.getWindowMapping());
-
-    // Update Mosaic layout
-    const windowConfigs = windowManager.getWindowConfigs();
-    const ids = windowConfigs.map((c) => c.id);
-    const layout = windowManager._buildMosaicLayout(ids);
-    if (layout) {
-      dispatch({ type: "mirador/UPDATE_WORKSPACE_MOSAIC_LAYOUT", layout });
-    }
-  }, [windowManager, syncController, enabledVoices, currentPage, dispatch]);
-
-
-const handleToggleViewMode = useCallback(async () => {
-  if (!windowManager || !syncController) return;
-
-  if (!isVoiceMode) {
-    // ── Normal → Voice ──────────────────────────────────────────
-
-    // 1. Originales Fenster entfernen
-    if (originalWindowId) {
-      removeWindow(originalWindowId);
-    }
-
-    // 2. Alle evtl. noch vorhandenen Voice-Windows entfernen
-    Object.keys(windows || {})
-      .filter(id => id.startsWith('voice-window'))
-      .forEach(id => removeWindow(id));
-
-    // 3. Mosaic-Layout komplett zurücksetzen
-    updateWorkspaceMosaicLayout(null);
-
-    // 4. Warten bis Mirador State + Mosaic sauber sind
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // 5. Voice-Windows frisch hinzufügen
-    await windowManager.addWindowsToMirador(dispatch, []);
-
-    // 6. SyncController-Mapping aktualisieren
-    syncController.setWindowMapping(windowManager.getWindowMapping());
-    dispatch({ type: 'sync/initController', controller: syncController });
-
-    setIsVoiceMode(true);
-
-  } else {
-    // ── Voice → Normal ──────────────────────────────────────────
-
-    // 1. Alle Voice-Windows entfernen
-    windowManager.removeAllWindows(dispatch);
-
-    windowManager.createWindows(currentPage - 1);
-
-    // 2. Mosaic-Layout zurücksetzen
-    updateWorkspaceMosaicLayout(null);
-
-    // 3. Warten
-    await new Promise(resolve => setTimeout(resolve, 300));
-
-    // 4. Originales Fenster wiederherstellen
-    if (originalWindowId) {
-      const manifestEntry = Object.entries(manifests || {}).find(
-        ([, m]) => detectSynchronizedVoices((m as any)?.json as IIIFManifest)
-      );
-      if (manifestEntry) {
-        const [manifestId] = manifestEntry;
-        const firstVoice = voiceData?.voices[0];
-        const currentCanvasId = (firstVoice && voiceData)
-          ? voiceData.voiceMapping[firstVoice][currentPage - 1]
-          : "";
-
-        addWindow({
-          id: originalWindowId as string,
-          manifestId,
-          canvasId: currentCanvasId,
-          allowClose: true,
-          allowMaximize: true,
-          allowWindowSideBar: true,
-          thumbnailNavigationPosition: 'off',
-          view: 'single',
-          voiceName: "",
-          companionWindows: [],
-          companionWindowIds: [],
-          allowFullscreen: true,
-          sideBarPanel: null,
-        });
+      // 1. Originales Fenster entfernen
+      if (originalWindowId) {
+        removeWindow(originalWindowId);
       }
-    }
 
-    setIsVoiceMode(false);
-  }
-}, [
-  isVoiceMode, windowManager, syncController,
-  originalWindowId, dispatch, removeWindow, addWindow,
-  updateWorkspaceMosaicLayout, manifests, voiceData, currentPage, windows
-]);
+      // 2. Alle evtl. noch vorhandenen Voice-Windows entfernen
+      Object.keys(windows || {})
+        .filter((id) => id.startsWith("voice-window"))
+        .forEach((id) => removeWindow(id));
+
+      // 3. Mosaic-Layout komplett zurücksetzen
+      updateWorkspaceMosaicLayout(null);
+
+      // 4. Warten bis Mirador State + Mosaic sauber sind
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // 5. Voice-Windows frisch hinzufügen
+      await windowManager.addWindowsToMirador(dispatch, []);
+
+      // 6. SyncController-Mapping aktualisieren
+      syncController.setWindowMapping(windowManager.getWindowMapping());
+      dispatch({ type: "sync/initController", controller: syncController });
+
+      setIsVoiceMode(true);
+    } else {
+      // ── Voice → Normal ──────────────────────────────────────────
+
+      // 1. Alle Voice-Windows entfernen
+      windowManager.removeAllWindows(dispatch);
+
+      windowManager.createWindows(currentPage - 1);
+
+      // 2. Mosaic-Layout zurücksetzen
+      updateWorkspaceMosaicLayout(null);
+
+      // 3. Warten
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // 4. Originales Fenster wiederherstellen
+      if (originalWindowId) {
+        const manifestEntry = Object.entries(manifests || {}).find(([, m]) =>
+          detectSynchronizedVoices((m as any)?.json as IIIFManifest),
+        );
+        if (manifestEntry) {
+          const [manifestId] = manifestEntry;
+          const firstVoice = voiceData?.voices[0];
+          const currentCanvasId =
+            firstVoice && voiceData
+              ? voiceData.voiceMapping[firstVoice][currentPage - 1]
+              : "";
+
+          addWindow({
+            id: originalWindowId,
+            manifestId,
+            canvasId: currentCanvasId,
+            allowClose: true,
+            allowMaximize: true,
+            allowWindowSideBar: true,
+            thumbnailNavigationPosition: "off",
+            view: "single",
+            voiceName: "",
+            companionWindows: [],
+            companionWindowIds: [],
+            allowFullscreen: true,
+            sideBarPanel: null,
+          });
+        }
+      }
+
+      setIsVoiceMode(false);
+    }
+  }, [
+    isVoiceMode,
+    windowManager,
+    syncController,
+    originalWindowId,
+    dispatch,
+    removeWindow,
+    addWindow,
+    updateWorkspaceMosaicLayout,
+    manifests,
+    voiceData,
+    currentPage,
+    windows,
+  ]);
 
   const openPopover = (event: React.MouseEvent<HTMLButtonElement>) => {
     setAnchorEl(event.currentTarget);
@@ -420,7 +447,12 @@ const handleToggleViewMode = useCallback(async () => {
   const open = Boolean(anchorEl);
   const voiceOpen = Boolean(voiceAnchorEl);
   const hasWorks = works && Object.keys(works).length > 0;
-  const hasTOC = isInitialized && voiceData && Object.values(voiceData.voiceMetadata).some(meta => meta.tocOffset !== undefined);
+  const hasTOC =
+    isInitialized &&
+    voiceData &&
+    Object.values(voiceData.voiceMetadata).some(
+      (meta) => meta.tocOffset !== undefined,
+    );
 
   /**
    * Render: Error State
@@ -450,13 +482,7 @@ const handleToggleViewMode = useCallback(async () => {
    * Render: Loading State
    */
   if (!isInitialized) {
-    return (
-      <Paper elevation={2} sx={{ p: 2, m: 2 }}>
-        <Typography variant="body2" color="text.secondary">
-          Lade Stimmen-Ansicht...
-        </Typography>
-      </Paper>
-    );
+    return null;
   }
 
   /**
@@ -472,33 +498,35 @@ const handleToggleViewMode = useCallback(async () => {
       }}
     >
       {/* Sync-Toggle */}
-     <Divider flexItem />
+      <Divider flexItem />
 
-     {/* View-Mode Toggle */}
-     <Tooltip title={isVoiceMode ? 'Zur Normalansicht' : 'Stimmen-Ansicht'} arrow>
-       <FormControlLabel
-         control={
-           <Switch
-             checked={isVoiceMode}
-             onChange={handleToggleViewMode}
-             disabled={!isInitialized}
-             size="small"
-             color="primary"
-           />
-         }
-         label={
-           <ContentCopyIcon
-             fontSize="small"
-             sx={{ color: isVoiceMode ? 'primary.main' : 'text.secondary' }}
-           />
-         }
-         labelPlacement="top"
-         sx={{ margin: 0, gap: 0 }}
-       />
-     </Tooltip>
+      {/* View-Mode Toggle */}
+      <Tooltip
+        title={isVoiceMode ? "Zur Normalansicht" : "Stimmen-Ansicht"}
+        arrow
+      >
+        <FormControlLabel
+          control={
+            <Switch
+              checked={isVoiceMode}
+              onChange={handleToggleViewMode}
+              disabled={!isInitialized}
+              size="small"
+              color="primary"
+            />
+          }
+          label={
+            <ContentCopyIcon
+              fontSize="small"
+              sx={{ color: isVoiceMode ? "primary.main" : "text.secondary" }}
+            />
+          }
+          labelPlacement="top"
+          sx={{ margin: 0, gap: 0 }}
+        />
+      </Tooltip>
 
-
-     <Divider flexItem />
+      <Divider flexItem />
 
       {/* Blätter-Buttons */}
       <Tooltip title="erste Seite" arrow>
@@ -539,9 +567,6 @@ const handleToggleViewMode = useCallback(async () => {
       </Tooltip>
 
       <Divider flexItem />
-
-
-
 
       <div>
         <Tooltip title="Stimmen auswählen">
@@ -584,19 +609,17 @@ const handleToggleViewMode = useCallback(async () => {
           <Paper square style={{ width: 250 }}>
             <List dense>
               {voiceData?.voices.map((voiceName) => (
-                <ListItem
-                  key={voiceName}
-                  disablePadding
-                >
-                  <ListItemButton
-                    onClick={() => handleToggleVoice(voiceName)}
-                  >
+                <ListItem key={voiceName} disablePadding>
+                  <ListItemButton onClick={() => handleToggleVoice(voiceName)}>
                     <ListItemIcon>
                       <Checkbox
                         edge="start"
                         checked={enabledVoices.includes(voiceName)}
                         disableRipple
-                        disabled={enabledVoices.length === 1 && enabledVoices.includes(voiceName)}
+                        disabled={
+                          enabledVoices.length === 1 &&
+                          enabledVoices.includes(voiceName)
+                        }
                       />
                     </ListItemIcon>
                     <ListItemText primary={voiceName} />
@@ -607,7 +630,13 @@ const handleToggleViewMode = useCallback(async () => {
           </Paper>
         </Popover>
 
-        <Tooltip title={hasTOC ? "Inhaltsverzeichnisse" : "Keine Inhaltsverzeichnisse vorhanden"}>
+        <Tooltip
+          title={
+            hasTOC
+              ? "Inhaltsverzeichnisse"
+              : "Keine Inhaltsverzeichnisse vorhanden"
+          }
+        >
           <span>
             <IconButton
               onClick={handleJumpToTOC}
@@ -665,10 +694,7 @@ const handleToggleViewMode = useCallback(async () => {
           <Paper square style={{ width: 350 }}>
             <List dense>
               {Object.values(works).map((work) => (
-                <ListItem
-                  key={work.werkId}
-                  disablePadding
-                >
+                <ListItem key={work.werkId} disablePadding>
                   <ListItemButton
                     onClick={() => {
                       closePopover();
