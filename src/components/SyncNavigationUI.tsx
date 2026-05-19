@@ -530,9 +530,11 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
 
       {/* Blätter-Buttons */}
       <Tooltip title="erste Seite" arrow>
-        <IconButton size="small" onClick={handleFirst}>
-          <KeyboardDoubleArrowLeftIcon fontSize="small" />
-        </IconButton>
+        <span>
+          <IconButton size="small" onClick={handleFirst} disabled={!isVoiceMode}>
+            <KeyboardDoubleArrowLeftIcon fontSize="small" />
+          </IconButton>
+        </span>
       </Tooltip>
 
       <Box
@@ -546,24 +548,30 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
         }}
       >
         <Tooltip title="Vorherige Seite" arrow>
-          <IconButton size="small" onClick={handlePrev}>
-            <NavigateBeforeIcon fontSize="small" />
-          </IconButton>
+          <span>
+            <IconButton size="small" onClick={handlePrev} disabled={!isVoiceMode}>
+              <NavigateBeforeIcon fontSize="small" />
+            </IconButton>
+          </span>
         </Tooltip>
 
         <Divider orientation="vertical" flexItem />
 
         <Tooltip title="Nächste Seite" arrow>
-          <IconButton size="small" onClick={handleNext}>
-            <NavigateNextIcon fontSize="small" />
-          </IconButton>
+          <span>
+            <IconButton size="small" onClick={handleNext} disabled={!isVoiceMode}>
+              <NavigateNextIcon fontSize="small" />
+            </IconButton>
+          </span>
         </Tooltip>
       </Box>
 
       <Tooltip title="letzte Seite" arrow>
-        <IconButton size="small" onClick={handleLast}>
-          <KeyboardDoubleArrowRightIcon fontSize="small" />
-        </IconButton>
+        <span>
+          <IconButton size="small" onClick={handleLast} disabled={!isVoiceMode}>
+            <KeyboardDoubleArrowRightIcon fontSize="small" />
+          </IconButton>
+        </span>
       </Tooltip>
 
       <Divider flexItem />
@@ -573,6 +581,7 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
           <span>
             <IconButton
               onClick={openVoicePopover}
+              disabled={!isVoiceMode}
               size="large"
               style={{
                 marginLeft: 8,
@@ -641,7 +650,7 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
             <IconButton
               onClick={handleJumpToTOC}
               size="large"
-              disabled={!hasTOC}
+              disabled={!isVoiceMode || !hasTOC}
               style={{
                 marginLeft: 8,
                 minWidth: 36,
@@ -658,7 +667,7 @@ const SyncNavigationUI: React.FC<SyncNavigationUIProps> = ({
             <IconButton
               onClick={openPopover}
               size="large"
-              disabled={!hasWorks}
+              disabled={!isVoiceMode || !hasWorks}
               style={{
                 marginLeft: 8,
                 minWidth: 36,
